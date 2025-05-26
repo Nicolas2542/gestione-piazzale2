@@ -34,6 +34,8 @@ import ClearIcon from '@mui/icons-material/Clear';
 import HistoryIcon from '@mui/icons-material/History';
 import DeleteIcon from '@mui/icons-material/Delete';
 
+const API_URL = 'https://web-production-b7884.up.railway.app';
+
 function App() {
   const [user, setUser] = useState(null);
   const [sessionId, setSessionId] = useState(null);
@@ -77,7 +79,7 @@ function App() {
     if (user) {
       const loadData = async () => {
         try {
-          const response = await fetch('http://localhost:3001/api/cells');
+          const response = await fetch(`${API_URL}/api/cells`);
           if (!response.ok) {
             throw new Error('Errore nel caricamento dei dati');
           }
@@ -108,7 +110,7 @@ function App() {
     if (user) {
       const pollData = async () => {
         try {
-          const response = await fetch('http://localhost:3001/api/cells');
+          const response = await fetch(`${API_URL}/api/cells`);
           if (!response.ok) {
             throw new Error('Errore nel caricamento dei dati');
           }
@@ -168,7 +170,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch('http://localhost:3001/api/logout', {
+      await fetch(`${API_URL}/api/logout`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -252,7 +254,7 @@ function App() {
 
       console.log('Sending data to server:', cellData); // Debug log
 
-      const response = await fetch('http://localhost:3001/api/cells', {
+      const response = await fetch(`${API_URL}/api/cells`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -294,7 +296,7 @@ function App() {
 
   const viewHistory = async (cellNumber) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/cells/${cellNumber}/history`);
+      const response = await fetch(`${API_URL}/api/cells/${cellNumber}/history`);
       if (!response.ok) throw new Error('Errore nel caricamento della cronologia');
       const history = await response.json();
       setHistoryDialog({ open: true, cellNumber, history });
@@ -306,7 +308,7 @@ function App() {
   const handleDelete = async (cellNumber) => {
     if (user !== 'admin') return; // Only admin can delete data
     try {
-      const response = await fetch(`http://localhost:3001/api/cells/${cellNumber}`, {
+      const response = await fetch(`${API_URL}/api/cells/${cellNumber}`, {
         method: 'DELETE'
       });
       
@@ -357,7 +359,7 @@ function App() {
 
     // Salva le modifiche sul server
     try {
-      await fetch('http://localhost:3001/api/preposto-changes', {
+      await fetch(`${API_URL}/api/preposto-changes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -400,7 +402,7 @@ function App() {
     }
 
     try {
-      const response = await fetch('http://localhost:3001/api/change-password', {
+      const response = await fetch(`${API_URL}/api/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

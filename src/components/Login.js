@@ -9,6 +9,8 @@ import {
   Alert
 } from '@mui/material';
 
+const API_URL = 'https://web-production-b7884.up.railway.app';
+
 function Login({ onLogin }) {
   const [credentials, setCredentials] = useState({
     username: '',
@@ -21,7 +23,7 @@ function Login({ onLogin }) {
     // Controlla le sessioni attive ogni 5 secondi
     const checkSessions = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/active-sessions');
+        const response = await fetch(`${API_URL}/api/active-sessions`);
         if (response.ok) {
           const data = await response.json();
           setActiveSessions(data);
@@ -50,7 +52,7 @@ function Login({ onLogin }) {
     setError('');
     
     try {
-      const response = await fetch('http://localhost:3001/api/login', {
+      const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
