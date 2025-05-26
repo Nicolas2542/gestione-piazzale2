@@ -42,18 +42,20 @@ const cellSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 
+// Schema per le sessioni
+const sessionSchema = new mongoose.Schema({
+  role: { type: String, required: true },
+  sessionId: { type: String, required: true, unique: true },
+  createdAt: { type: Date, default: Date.now, expires: 86400 } // Scade dopo 24 ore
+});
+
 const Cell = mongoose.model('Cell', cellSchema);
+const Session = mongoose.model('Session', sessionSchema);
 
 // In-memory storage for passwords
 let passwords = {
   admin: 'admin123',
   preposto: 'preposto123'
-};
-
-// In-memory storage for active sessions
-let activeSessions = {
-  admin: [],
-  preposto: []
 };
 
 // Connessione a MongoDB
@@ -122,37 +124,52 @@ async function initializeDatabase() {
 }
 
 // Login endpoint
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
-  
-  if (username === 'admin' && password === passwords.admin) {
-    const sessionId = Date.now().toString();
-    activeSessions.admin.push(sessionId);
-    res.json({ role: 'admin', sessionId });
-  } else if (username === 'preposto' && password === passwords.preposto) {
-    const sessionId = Date.now().toString();
-    activeSessions.preposto.push(sessionId);
-    res.json({ role: 'preposto', sessionId });
-  } else {
-    res.status(401).json({ error: 'Credenziali non valide' });
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (username === 'admin' && password === passwords.admin) {
+      const sessionId = Date.now().toString();
+      await Session.create({ role: 'admin', sessionId });
+      res.json({ role: 'admin', sessionId });
+    } else if (username === 'preposto' && password === passwords.preposto) {
+      const sessionId = Date.now().toString();
+      await Session.create({ role: 'preposto', sessionId });
+      res.json({ role: 'preposto', sessionId });
+    } else {
+      res.status(401).json({ error: 'Credenziali non valide' });
+    }
+  } catch (error) {
+    console.error('Errore durante il login:', error);
+    res.status(500).json({ error: 'Errore durante il login' });
   }
 });
 
 // Logout endpoint
-app.post('/api/logout', (req, res) => {
-  const { role, sessionId } = req.body;
-  if (activeSessions[role]) {
-    activeSessions[role] = activeSessions[role].filter(id => id !== sessionId);
+app.post('/api/logout', async (req, res) => {
+  try {
+    const { role, sessionId } = req.body;
+    await Session.deleteOne({ role, sessionId });
+    res.json({ message: 'Logout effettuato con successo' });
+  } catch (error) {
+    console.error('Errore durante il logout:', error);
+    res.status(500).json({ error: 'Errore durante il logout' });
   }
-  res.json({ message: 'Logout effettuato con successo' });
 });
 
 // Get active sessions count
-app.get('/api/active-sessions', (req, res) => {
-  res.json({
-    admin: activeSessions.admin.length,
-    preposto: activeSessions.preposto.length
-  });
+app.get('/api/active-sessions', async (req, res) => {
+  try {
+    const adminCount = await Session.countDocuments({ role: 'admin' });
+    const prepostoCount = await Session.countDocuments({ role: 'preposto' });
+    res.json({
+      admin: adminCount,
+      preposto: prepostoCount
+    });
+  } catch (error) {
+    console.error('Errore durante il recupero delle sessioni attive:', error);
+    res.status(500).json({ error: 'Errore durante il recupero delle sessioni attive' });
+  }
 });
 
 // Get all cells
