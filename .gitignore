@@ -22,4 +22,5 @@ yarn-error.log*
 
 # database
 *.sqlite
-*.db 
+*.db
+/data 

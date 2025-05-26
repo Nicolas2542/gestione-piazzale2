@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -23,8 +24,14 @@ const CACHE_DURATION = 2000; // 2 secondi
 // Serve static files from the React build directory
 app.use(express.static(path.join(__dirname, 'build')));
 
+// Assicurati che la directory data esista
+const dataDir = path.join(__dirname, 'data');
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir);
+}
+
 // Inizializza il database
-const db = new sqlite3.Database(path.join(__dirname, 'database.sqlite'), (err) => {
+const db = new sqlite3.Database(path.join(dataDir, 'database.sqlite'), (err) => {
   if (err) {
     console.error('Errore durante la connessione al database:', err);
   } else {
