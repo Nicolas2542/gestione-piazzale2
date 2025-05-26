@@ -1,8 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-const sqlite3 = require('sqlite3').verbose();
+const mongoose = require('mongoose');
 const path = require('path');
-const fs = require('fs');
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -24,95 +23,26 @@ const CACHE_DURATION = 2000; // 2 secondi
 // Serve static files from the React build directory
 app.use(express.static(path.join(__dirname, 'build')));
 
-// Assicurati che la directory data esista
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir);
-}
+// Schema per le celle
+const cellSchema = new mongoose.Schema({
+  cell_number: { type: String, required: true, unique: true },
+  field_id: String,
+  field_n: String,
+  field_tr: String,
+  field_note: String,
+  status: { type: String, default: 'default' },
+  cards: [{
+    status: { type: String, default: 'default' },
+    startTime: Date,
+    endTime: Date,
+    TR: String,
+    ID: String,
+    N: String,
+    Note: String
+  }]
+}, { timestamps: true });
 
-// Inizializza il database
-const db = new sqlite3.Database(path.join(dataDir, 'database.sqlite'), (err) => {
-  if (err) {
-    console.error('Errore durante la connessione al database:', err);
-  } else {
-    console.log('Connesso al database SQLite');
-    initializeDatabase();
-  }
-});
-
-// Funzione per inizializzare il database
-function initializeDatabase() {
-  // Crea la tabella delle celle se non esiste
-  db.run(`CREATE TABLE IF NOT EXISTS cells (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cell_number TEXT UNIQUE,
-    field_id TEXT,
-    field_n TEXT,
-    field_tr TEXT,
-    field_note TEXT,
-    status TEXT DEFAULT 'default',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // Crea la tabella delle card se non esiste
-  db.run(`CREATE TABLE IF NOT EXISTS cards (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cell_id INTEGER,
-    card_index INTEGER,
-    status TEXT DEFAULT 'default',
-    start_time DATETIME,
-    end_time DATETIME,
-    TR TEXT,
-    card_id TEXT,
-    N TEXT,
-    Note TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (cell_id) REFERENCES cells(id),
-    UNIQUE(cell_id, card_index)
-  )`);
-
-  // Inizializza le celle se non esistono
-  db.get("SELECT COUNT(*) as count FROM cells", (err, row) => {
-    if (err) {
-      console.error('Errore durante il conteggio delle celle:', err);
-      return;
-    }
-
-    if (row.count === 0) {
-      // Inserisci le celle iniziali
-      const cells = Array(17).fill(null).map((_, index) => {
-        let cellNumber;
-        if (index < 10) {
-          cellNumber = `Buca ${index + 4}`;
-        } else if (index < 14) {
-          cellNumber = `Buca ${index + 16}`;
-        } else {
-          cellNumber = `Preparazione ${index - 13}`;
-        }
-        return cellNumber;
-      });
-
-      const stmt = db.prepare("INSERT INTO cells (cell_number) VALUES (?)");
-      cells.forEach(cellNumber => {
-        stmt.run(cellNumber, function(err) {
-          if (err) {
-            console.error('Errore durante l\'inserimento della cella:', err);
-            return;
-          }
-          // Inserisci le 4 card per ogni cella
-          const cardStmt = db.prepare("INSERT INTO cards (cell_id, card_index) VALUES (?, ?)");
-          for (let i = 0; i < 4; i++) {
-            cardStmt.run(this.lastID, i);
-          }
-          cardStmt.finalize();
-        });
-      });
-      stmt.finalize();
-    }
-  });
-}
+const Cell = mongoose.model('Cell', cellSchema);
 
 // In-memory storage for passwords
 let passwords = {
@@ -125,6 +55,71 @@ let activeSessions = {
   admin: [],
   preposto: []
 };
+
+// Connessione a MongoDB
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gestione-piazzale', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+})
+  .then(() => {
+    console.log('Connesso a MongoDB con successo');
+    console.log('URI di connessione:', process.env.MONGODB_URI);
+    initializeDatabase();
+  })
+  .catch(err => {
+    console.error('Errore durante la connessione a MongoDB:', err);
+    console.error('URI di connessione:', process.env.MONGODB_URI);
+  });
+
+// Aggiungi listener per gli eventi di connessione
+mongoose.connection.on('connected', () => {
+  console.log('Mongoose connesso al database');
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('Errore di connessione Mongoose:', err);
+});
+
+mongoose.connection.on('disconnected', () => {
+  console.log('Mongoose disconnesso dal database');
+});
+
+// Funzione per inizializzare il database
+async function initializeDatabase() {
+  try {
+    const count = await Cell.countDocuments();
+    if (count === 0) {
+      // Inserisci le celle iniziali
+      const cells = Array(17).fill(null).map((_, index) => {
+        let cellNumber;
+        if (index < 10) {
+          cellNumber = `Buca ${index + 4}`;
+        } else if (index < 14) {
+          cellNumber = `Buca ${index + 16}`;
+        } else {
+          cellNumber = `Preparazione ${index - 13}`;
+        }
+        return new Cell({
+          cell_number: cellNumber,
+          cards: Array(4).fill(null).map(() => ({
+            status: 'default',
+            startTime: null,
+            endTime: null,
+            TR: '',
+            ID: '',
+            N: '',
+            Note: ''
+          }))
+        });
+      });
+
+      await Cell.insertMany(cells);
+      console.log('Database inizializzato con successo');
+    }
+  } catch (error) {
+    console.error('Errore durante l\'inizializzazione del database:', error);
+  }
+}
 
 // Login endpoint
 app.post('/api/login', (req, res) => {
@@ -161,279 +156,145 @@ app.get('/api/active-sessions', (req, res) => {
 });
 
 // Get all cells
-app.get('/api/cells', (req, res) => {
-  const now = Date.now();
-  
-  // Se la cache è valida, usa quella
-  if (cellsCache && (now - lastCacheUpdate) < CACHE_DURATION) {
-    return res.json(cellsCache);
-  }
-
-  db.all(`
-    SELECT c.*, 
-           json_group_array(
-             json_object(
-               'status', card.status,
-               'startTime', card.start_time,
-               'endTime', card.end_time,
-               'TR', card.TR,
-               'card_id', card.card_id,
-               'N', card.N,
-               'Note', card.Note
-             )
-           ) as cards
-    FROM cells c
-    LEFT JOIN cards card ON c.id = card.cell_id
-    GROUP BY c.id
-    ORDER BY c.id
-  `, [], (err, rows) => {
-    if (err) {
-      console.error('Errore durante il recupero delle celle:', err);
-      res.status(500).json({ error: 'Errore durante il recupero delle celle' });
-      return;
+app.get('/api/cells', async (req, res) => {
+  try {
+    const now = Date.now();
+    
+    // Se la cache è valida, usa quella
+    if (cellsCache && (now - lastCacheUpdate) < CACHE_DURATION) {
+      return res.json(cellsCache);
     }
 
-    // Converti la stringa JSON delle card in array
-    const cells = rows.map(row => ({
-      ...row,
-      cards: JSON.parse(row.cards)
-    }));
-
+    const cells = await Cell.find().sort('cell_number');
+    
     // Aggiorna la cache
     cellsCache = cells;
     lastCacheUpdate = now;
 
     res.json(cells);
-  });
+  } catch (error) {
+    console.error('Errore durante il recupero delle celle:', error);
+    res.status(500).json({ error: 'Errore durante il recupero delle celle' });
+  }
 });
 
 // Save cell data (admin)
-app.post('/api/cells', (req, res) => {
-  const cellData = req.body;
-  
-  db.get("SELECT id FROM cells WHERE cell_number = ?", [cellData.cell_number], (err, row) => {
-    if (err) {
-      console.error('Errore durante la ricerca della cella:', err);
-      res.status(500).json({ error: 'Errore durante il salvataggio' });
-      return;
+app.post('/api/cells', async (req, res) => {
+  try {
+    const cellData = req.body;
+    const cell = await Cell.findOne({ cell_number: cellData.cell_number });
+    
+    if (!cell) {
+      return res.status(404).json({ error: 'Cella non trovata' });
     }
 
-    if (!row) {
-      res.status(404).json({ error: 'Cella non trovata' });
-      return;
-    }
+    cell.field_id = cellData.field_id || '';
+    cell.field_n = cellData.field_n || '';
+    cell.field_tr = cellData.field_tr || '';
+    cell.field_note = cellData.field_note || '';
+    cell.cards = cellData.cards;
 
-    // Aggiorna i dati della cella
-    db.run(`
-      UPDATE cells 
-      SET field_id = ?,
-          field_n = ?,
-          field_tr = ?,
-          field_note = ?,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `, [
-      cellData.field_id || '',
-      cellData.field_n || '',
-      cellData.field_tr || '',
-      cellData.field_note || '',
-      row.id
-    ], function(err) {
-      if (err) {
-        console.error('Errore durante l\'aggiornamento della cella:', err);
-        res.status(500).json({ error: 'Errore durante il salvataggio' });
-        return;
-      }
-
-      // Aggiorna le card
-      const cardStmt = db.prepare(`
-        UPDATE cards 
-        SET status = ?,
-            TR = ?,
-            card_id = ?,
-            N = ?,
-            Note = ?,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE cell_id = ? AND card_index = ?
-      `);
-
-      cellData.cards.forEach((card, index) => {
-        cardStmt.run(
-          card.status || 'default',
-          card.TR || '',
-          card.card_id || '',
-          card.N || '',
-          card.Note || '',
-          row.id,
-          index
-        );
-      });
-
-      cardStmt.finalize();
-      
-      // Invalida la cache
-      cellsCache = null;
-      
-      res.json({ message: 'Dati salvati con successo' });
-    });
-  });
+    await cell.save();
+    
+    // Invalida la cache
+    cellsCache = null;
+    
+    res.json({ message: 'Dati salvati con successo' });
+  } catch (error) {
+    console.error('Errore durante il salvataggio:', error);
+    res.status(500).json({ error: 'Errore durante il salvataggio' });
+  }
 });
 
 // Save preposto changes
-app.post('/api/preposto-changes', (req, res) => {
-  const { cellIndex, cardIndex, status, startTime, endTime } = req.body;
-  
-  db.get("SELECT id FROM cells WHERE id = ?", [cellIndex + 1], (err, row) => {
-    if (err || !row) {
-      res.status(404).json({ error: 'Cella non trovata' });
-      return;
+app.post('/api/preposto-changes', async (req, res) => {
+  try {
+    const { cellIndex, cardIndex, status, startTime, endTime } = req.body;
+    const cell = await Cell.findOne().skip(cellIndex);
+    
+    if (!cell) {
+      return res.status(404).json({ error: 'Cella non trovata' });
     }
 
-    db.run(`
-      UPDATE cards 
-      SET status = ?,
-          start_time = ?,
-          end_time = ?,
-          updated_at = CURRENT_TIMESTAMP
-      WHERE cell_id = ? AND card_index = ?
-    `, [status, startTime, endTime, row.id, cardIndex], function(err) {
-      if (err) {
-        console.error('Errore durante l\'aggiornamento della card:', err);
-        res.status(500).json({ error: 'Errore durante il salvataggio' });
-        return;
-      }
-      res.json({ message: 'Modifiche salvate con successo' });
-    });
-  });
+    cell.cards[cardIndex].status = status;
+    cell.cards[cardIndex].startTime = startTime;
+    cell.cards[cardIndex].endTime = endTime;
+
+    await cell.save();
+    res.json({ message: 'Modifiche salvate con successo' });
+  } catch (error) {
+    console.error('Errore durante il salvataggio:', error);
+    res.status(500).json({ error: 'Errore durante il salvataggio' });
+  }
 });
 
 // Get cell history
-app.get('/api/cells/:cellNumber/history', (req, res) => {
-  const { cellNumber } = req.params;
-  
-  db.all(`
-    SELECT c.*, 
-           json_group_array(
-             json_object(
-               'status', card.status,
-               'startTime', card.start_time,
-               'endTime', card.end_time,
-               'TR', card.TR,
-               'card_id', card.card_id,
-               'N', card.N,
-               'Note', card.Note,
-               'updated_at', card.updated_at
-             )
-           ) as cards_history
-    FROM cells c
-    LEFT JOIN cards card ON c.id = card.cell_id
-    WHERE c.cell_number = ?
-    GROUP BY c.id
-  `, [cellNumber], (err, rows) => {
-    if (err) {
-      console.error('Errore durante il recupero della cronologia:', err);
-      res.status(500).json({ error: 'Errore durante il recupero della cronologia' });
-      return;
+app.get('/api/cells/:cellNumber/history', async (req, res) => {
+  try {
+    const { cellNumber } = req.params;
+    const cell = await Cell.findOne({ cell_number: cellNumber });
+    
+    if (!cell) {
+      return res.status(404).json({ error: 'Cella non trovata' });
     }
 
-    if (rows.length === 0) {
-      res.status(404).json({ error: 'Cella non trovata' });
-      return;
-    }
-
-    const history = rows.map(row => ({
-      cell_number: row.cell_number,
-      field_id: row.field_id,
-      field_n: row.field_n,
-      field_tr: row.field_tr,
-      field_note: row.field_note,
-      updated_at: row.updated_at,
-      cards: JSON.parse(row.cards_history)
-    }));
-
-    res.json(history);
-  });
+    res.json([cell]);
+  } catch (error) {
+    console.error('Errore durante il recupero della cronologia:', error);
+    res.status(500).json({ error: 'Errore durante il recupero della cronologia' });
+  }
 });
 
 // Delete cell data
-app.delete('/api/cells/:cellNumber', (req, res) => {
-  const { cellNumber } = req.params;
-  
-  db.get("SELECT id FROM cells WHERE cell_number = ?", [cellNumber], (err, row) => {
-    if (err || !row) {
-      res.status(404).json({ error: 'Cella non trovata' });
-      return;
+app.delete('/api/cells/:cellNumber', async (req, res) => {
+  try {
+    const { cellNumber } = req.params;
+    const cell = await Cell.findOne({ cell_number: cellNumber });
+    
+    if (!cell) {
+      return res.status(404).json({ error: 'Cella non trovata' });
     }
 
-    // Resetta i dati della cella
-    db.run(`
-      UPDATE cells 
-      SET field_id = '',
-          field_n = '',
-          field_tr = '',
-          field_note = '',
-          status = 'default',
-          updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `, [row.id], function(err) {
-      if (err) {
-        console.error('Errore durante il reset della cella:', err);
-        res.status(500).json({ error: 'Errore durante l\'eliminazione' });
-        return;
-      }
+    cell.field_id = '';
+    cell.field_n = '';
+    cell.field_tr = '';
+    cell.field_note = '';
+    cell.status = 'default';
+    cell.cards = cell.cards.map(() => ({
+      status: 'default',
+      startTime: null,
+      endTime: null,
+      TR: '',
+      ID: '',
+      N: '',
+      Note: ''
+    }));
 
-      // Resetta le card
-      db.run(`
-        UPDATE cards 
-        SET status = 'default',
-            start_time = NULL,
-            end_time = NULL,
-            TR = '',
-            card_id = '',
-            N = '',
-            Note = '',
-            updated_at = CURRENT_TIMESTAMP
-        WHERE cell_id = ?
-      `, [row.id], function(err) {
-        if (err) {
-          console.error('Errore durante il reset delle card:', err);
-          res.status(500).json({ error: 'Errore durante l\'eliminazione' });
-          return;
-        }
-        res.json({ message: 'Dati eliminati con successo' });
-      });
-    });
-  });
+    await cell.save();
+    res.json({ message: 'Dati eliminati con successo' });
+  } catch (error) {
+    console.error('Errore durante l\'eliminazione:', error);
+    res.status(500).json({ error: 'Errore durante l\'eliminazione' });
+  }
 });
 
 // Reset monitoring endpoint
-app.post('/api/reset-monitoring', (req, res) => {
-  db.run(`
-    UPDATE cells 
-    SET status = 'default',
-        updated_at = CURRENT_TIMESTAMP
-  `, [], function(err) {
-    if (err) {
-      console.error('Errore durante il reset del monitoraggio:', err);
-      res.status(500).json({ error: 'Errore durante il reset del monitoraggio' });
-      return;
-    }
-
-    db.run(`
-      UPDATE cards 
-      SET status = 'default',
-          start_time = NULL,
-          end_time = NULL,
-          updated_at = CURRENT_TIMESTAMP
-    `, [], function(err) {
-      if (err) {
-        console.error('Errore durante il reset delle card:', err);
-        res.status(500).json({ error: 'Errore durante il reset del monitoraggio' });
-        return;
+app.post('/api/reset-monitoring', async (req, res) => {
+  try {
+    await Cell.updateMany({}, {
+      $set: {
+        status: 'default',
+        'cards.$[].status': 'default',
+        'cards.$[].startTime': null,
+        'cards.$[].endTime': null
       }
-      res.json({ message: 'Monitoraggio resettato con successo' });
     });
-  });
+    
+    res.json({ message: 'Monitoraggio resettato con successo' });
+  } catch (error) {
+    console.error('Errore durante il reset del monitoraggio:', error);
+    res.status(500).json({ error: 'Errore durante il reset del monitoraggio' });
+  }
 });
 
 // Change password endpoint
