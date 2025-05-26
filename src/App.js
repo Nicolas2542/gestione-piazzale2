@@ -180,6 +180,8 @@ function App() {
     } catch (error) {
       console.error('Error during logout:', error);
     }
+    // Rimuovi la sessione dal localStorage
+    localStorage.removeItem('session');
     setUser(null);
     setSessionId(null);
     showNotification('Logout effettuato', 'success');

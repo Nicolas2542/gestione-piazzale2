@@ -20,6 +20,13 @@ function Login({ onLogin }) {
   const [activeSessions, setActiveSessions] = useState({ admin: 0, preposto: 0 });
 
   useEffect(() => {
+    // Controlla se c'è una sessione salvata
+    const savedSession = localStorage.getItem('session');
+    if (savedSession) {
+      const { role, sessionId } = JSON.parse(savedSession);
+      onLogin(role, sessionId);
+    }
+
     // Controlla le sessioni attive ogni 5 secondi
     const checkSessions = async () => {
       try {
@@ -37,7 +44,7 @@ function Login({ onLogin }) {
     checkSessions(); // Controlla immediatamente
 
     return () => clearInterval(interval);
-  }, []);
+  }, [onLogin]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -65,6 +72,8 @@ function Login({ onLogin }) {
       }
 
       const data = await response.json();
+      // Salva la sessione nel localStorage
+      localStorage.setItem('session', JSON.stringify(data));
       onLogin(data.role, data.sessionId);
     } catch (error) {
       setError(error.message);
