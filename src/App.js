@@ -101,7 +101,7 @@ function App() {
 
       loadData();
     }
-  }, [user]);
+  }, [user, cells]);
 
   // Polling per aggiornare i dati
   useEffect(() => {

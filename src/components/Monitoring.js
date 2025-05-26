@@ -20,31 +20,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
 function Monitoring({ onBack, cells, user }) {
-  const [monitoringData, setMonitoringData] = useState([]);
   const [resetDialog, setResetDialog] = useState({ open: false });
-
-  useEffect(() => {
-    // Process cells data to track confirmation times
-    const processedData = cells.flatMap((cell, cellIndex) => 
-      cell.cards.map((card, cardIndex) => {
-        if (card.status === 'yellow' || card.status === 'green') {
-          return {
-            cellNumber: cell.id,
-            cardIndex: cardIndex + 1,
-            status: card.status,
-            startTime: card.startTime || new Date().toISOString(),
-            endTime: card.status === 'green' ? card.endTime : null,
-            duration: card.status === 'green' ? 
-              Math.round((new Date(card.endTime) - new Date(card.startTime)) / 1000) : 
-              Math.round((new Date() - new Date(card.startTime)) / 1000)
-          };
-        }
-        return null;
-      }).filter(Boolean)
-    );
-
-    setMonitoringData(processedData);
-  }, [cells]);
 
   const formatDuration = (seconds) => {
     const hours = Math.floor(seconds / 3600);
@@ -61,8 +37,6 @@ function Monitoring({ onBack, cells, user }) {
       
       if (!response.ok) throw new Error('Errore nel reset dei dati');
       
-      // Aggiorna i dati locali
-      setMonitoringData([]);
       setResetDialog({ open: false });
     } catch (error) {
       console.error('Error resetting monitoring data:', error);
