@@ -143,7 +143,7 @@ function App() {
         }
       };
 
-      // Poll ogni 5 secondi invece di 2
+      // Poll ogni 5 secondi
       const interval = setInterval(pollData, 5000);
       pollData(); // Poll immediatamente
 

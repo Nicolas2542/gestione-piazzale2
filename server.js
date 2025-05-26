@@ -15,6 +15,11 @@ app.use(cors({
 
 app.use(express.json());
 
+// Cache per le celle
+let cellsCache = null;
+let lastCacheUpdate = 0;
+const CACHE_DURATION = 2000; // 2 secondi
+
 // Serve static files from the React build directory
 app.use(express.static(path.join(__dirname, 'build')));
 
@@ -150,6 +155,13 @@ app.get('/api/active-sessions', (req, res) => {
 
 // Get all cells
 app.get('/api/cells', (req, res) => {
+  const now = Date.now();
+  
+  // Se la cache è valida, usa quella
+  if (cellsCache && (now - lastCacheUpdate) < CACHE_DURATION) {
+    return res.json(cellsCache);
+  }
+
   db.all(`
     SELECT c.*, 
            json_group_array(
@@ -179,6 +191,10 @@ app.get('/api/cells', (req, res) => {
       ...row,
       cards: JSON.parse(row.cards)
     }));
+
+    // Aggiorna la cache
+    cellsCache = cells;
+    lastCacheUpdate = now;
 
     res.json(cells);
   });
@@ -247,6 +263,10 @@ app.post('/api/cells', (req, res) => {
       });
 
       cardStmt.finalize();
+      
+      // Invalida la cache
+      cellsCache = null;
+      
       res.json({ message: 'Dati salvati con successo' });
     });
   });
