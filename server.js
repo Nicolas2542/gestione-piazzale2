@@ -313,6 +313,13 @@ app.post('/api/cells', async (req, res) => {
     const cellData = req.body;
     console.log('Received data:', JSON.stringify(cellData, null, 2));
     
+    // Verifica che i dati ricevuti siano validi
+    if (!cellData.cell_number || !Array.isArray(cellData.cards)) {
+      console.error('Invalid data received:', cellData);
+      return res.status(400).json({ error: 'Dati non validi' });
+    }
+
+    // Trova la cella esistente
     const cell = await Cell.findOne({ cell_number: cellData.cell_number });
     console.log('Found cell:', JSON.stringify(cell, null, 2));
     
@@ -321,56 +328,52 @@ app.post('/api/cells', async (req, res) => {
       return res.status(404).json({ error: 'Cella non trovata' });
     }
 
-    // Aggiorna l'array cards con i nuovi dati
-    if (cellData.cards && Array.isArray(cellData.cards)) {
-      // Assicurati che l'array cards abbia sempre 4 elementi
-      while (cell.cards.length < 4) {
-        cell.cards.push({
-          status: 'default',
-          startTime: null,
-          endTime: null,
-          TR: '',
-          ID: '',
-          N: '',
-          Note: ''
-        });
-      }
+    // Prepara l'array cards aggiornato
+    const updatedCards = cellData.cards.map((newCard, index) => {
+      // Mantieni i dati esistenti se non vengono forniti nuovi dati
+      const existingCard = cell.cards[index] || {};
+      return {
+        status: newCard.status || existingCard.status || 'default',
+        startTime: newCard.startTime || existingCard.startTime || null,
+        endTime: newCard.endTime || existingCard.endTime || null,
+        TR: newCard.TR || existingCard.TR || '',
+        ID: newCard.ID || existingCard.ID || '',
+        N: newCard.N || existingCard.N || '',
+        Note: newCard.Note || existingCard.Note || ''
+      };
+    });
 
-      // Aggiorna ogni card con i nuovi dati
-      cellData.cards.forEach((newCard, index) => {
-        if (index < cell.cards.length) {
-          cell.cards[index] = {
-            status: newCard.status || 'default',
-            startTime: newCard.startTime || null,
-            endTime: newCard.endTime || null,
-            TR: newCard.TR || '',
-            ID: newCard.ID || '',
-            N: newCard.N || '',
-            Note: newCard.Note || ''
-          };
+    console.log('Prepared updated cards:', JSON.stringify(updatedCards, null, 2));
+
+    // Aggiorna la cella usando updateOne per garantire l'atomicità
+    const updateResult = await Cell.updateOne(
+      { cell_number: cellData.cell_number },
+      { 
+        $set: { 
+          cards: updatedCards,
+          updatedAt: new Date()
         }
-      });
+      }
+    );
+
+    console.log('Update result:', JSON.stringify(updateResult, null, 2));
+
+    if (updateResult.modifiedCount === 0) {
+      console.error('No documents were modified');
+      return res.status(500).json({ error: 'Errore durante il salvataggio' });
     }
 
-    console.log('Updated cell data:', JSON.stringify(cell, null, 2));
-    
-    // Usa findOneAndUpdate per assicurarsi che l'aggiornamento sia atomico
-    const updatedCell = await Cell.findOneAndUpdate(
-      { cell_number: cellData.cell_number },
-      { $set: { cards: cell.cards } },
-      { new: true, runValidators: true }
-    );
-    
-    console.log('Cell saved successfully:', JSON.stringify(updatedCell, null, 2));
-    
-    // Invalida la cache
-    cellsCache = null;
-    
     // Verifica che i dati siano stati salvati
     const savedCell = await Cell.findOne({ cell_number: cellData.cell_number });
     console.log('Verified saved data:', JSON.stringify(savedCell, null, 2));
     
-    res.json({ message: 'Dati salvati con successo', cell: savedCell });
+    // Invalida la cache
+    cellsCache = null;
+    
+    res.json({ 
+      message: 'Dati salvati con successo',
+      cell: savedCell
+    });
   } catch (error) {
     console.error('Errore durante il salvataggio:', error);
     console.error('Stack trace:', error.stack);
