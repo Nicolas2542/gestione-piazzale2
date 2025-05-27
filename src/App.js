@@ -249,11 +249,15 @@ function App() {
 
       const cellData = {
         cell_number: cellName,
-        field_id: cells[cellIndex].cards[0].ID,
-        field_n: cells[cellIndex].cards[0].N,
-        field_tr: cells[cellIndex].cards[0].TR,
-        field_note: cells[cellIndex].cards[0].Note,
-        cards: cells[cellIndex].cards
+        cards: cells[cellIndex].cards.map(card => ({
+          status: card.status || 'default',
+          startTime: card.startTime || null,
+          endTime: card.endTime || null,
+          TR: card.TR || '',
+          ID: card.ID || '',
+          N: card.N || '',
+          Note: card.Note || ''
+        }))
       };
 
       console.log('Sending data to server:', cellData); // Debug log

@@ -59,19 +59,90 @@ let passwords = {
 };
 
 // Connessione a MongoDB
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/gestione-piazzale', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-  .then(() => {
-    console.log('Connesso a MongoDB con successo');
-    console.log('URI di connessione:', process.env.MONGODB_URI);
-    initializeDatabase();
-  })
-  .catch(err => {
-    console.error('Errore durante la connessione a MongoDB:', err);
-    console.error('URI di connessione:', process.env.MONGODB_URI);
-  });
+const connectDB = async () => {
+  try {
+    console.log('=== VERIFICA VARIABILI D\'AMBIENTE ===');
+    console.log('MONGODB_URI presente:', !!process.env.MONGODB_URI);
+    console.log('NODE_ENV:', process.env.NODE_ENV);
+    
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI non è definita nelle variabili d\'ambiente');
+    }
+
+    const uri = process.env.MONGODB_URI;
+    console.log('=== TENTATIVO DI CONNESSIONE MONGODB ===');
+    console.log('URI:', uri.replace(/:[^:@]*@/, ':****@')); // Nasconde la password nei log
+    
+    // Disconnetti se c'è una connessione esistente
+    if (mongoose.connection.readyState !== 0) {
+      console.log('Disconnessione da MongoDB esistente...');
+      await mongoose.disconnect();
+    }
+
+    // Configurazione più robusta
+    const options = {
+      serverSelectionTimeoutMS: 60000,
+      socketTimeoutMS: 90000,
+      connectTimeoutMS: 60000,
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      retryWrites: true,
+      retryReads: true,
+      heartbeatFrequencyMS: 10000,
+      family: 4,
+      autoIndex: true,
+      maxIdleTimeMS: 60000,
+      waitQueueTimeoutMS: 60000
+    };
+
+    console.log('Opzioni di connessione:', options);
+    
+    await mongoose.connect(uri, options);
+    
+    console.log('=== CONNESSIONE MONGODB RIUSCITA ===');
+    console.log('Stato connessione:', mongoose.connection.readyState);
+    console.log('Host:', mongoose.connection.host);
+    console.log('Port:', mongoose.connection.port);
+    console.log('Database:', mongoose.connection.name);
+    
+    await initializeDatabase();
+  } catch (err) {
+    console.error('=== ERRORE CONNESSIONE MONGODB ===');
+    console.error('Errore:', err.message);
+    console.error('Stack trace:', err.stack);
+    console.error('Stato connessione:', mongoose.connection.readyState);
+    console.error('Dettagli errore:', {
+      name: err.name,
+      code: err.code,
+      codeName: err.codeName
+    });
+    
+    console.log('Riprovo la connessione tra 10 secondi...');
+    setTimeout(connectDB, 10000);
+  }
+};
+
+// Funzione per verificare la connessione
+const checkConnection = async () => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      console.log('Tentativo di riconnessione al database...');
+      await connectDB();
+    } else {
+      // Verifica la connessione con un ping
+      await mongoose.connection.db.admin().ping();
+      console.log('Ping al database riuscito');
+    }
+  } catch (error) {
+    console.error('Errore durante il check della connessione:', error);
+    await connectDB();
+  }
+};
+
+// Verifica la connessione ogni 15 secondi invece di 30
+setInterval(checkConnection, 15000);
+
+connectDB();
 
 // Aggiungi listener per gli eventi di connessione
 mongoose.connection.on('connected', () => {
@@ -80,10 +151,13 @@ mongoose.connection.on('connected', () => {
 
 mongoose.connection.on('error', (err) => {
   console.error('Errore di connessione Mongoose:', err);
+  console.error('Stack trace:', err.stack);
 });
 
 mongoose.connection.on('disconnected', () => {
   console.log('Mongoose disconnesso dal database');
+  // Tenta di riconnettersi dopo 5 secondi
+  setTimeout(connectDB, 5000);
 });
 
 // Funzione per inizializzare il database
@@ -126,22 +200,45 @@ async function initializeDatabase() {
 // Login endpoint
 app.post('/api/login', async (req, res) => {
   try {
-    const { username, password } = req.body;
+    console.log('Tentativo di login...');
+    console.log('Stato connessione MongoDB:', mongoose.connection.readyState);
     
+    await checkConnection();
+    
+    if (mongoose.connection.readyState !== 1) {
+      console.error('Database non connesso. Stato:', mongoose.connection.readyState);
+      return res.status(503).json({ error: 'Database temporaneamente non disponibile' });
+    }
+
+    const { username, password } = req.body;
+    console.log('Tentativo di login per:', username);
+    
+    if (!username || !password) {
+      console.log('Credenziali mancanti');
+      return res.status(400).json({ error: 'Username e password sono richiesti' });
+    }
+
     if (username === 'admin' && password === passwords.admin) {
       const sessionId = Date.now().toString();
+      console.log('Creazione sessione admin...');
       await Session.create({ role: 'admin', sessionId });
+      console.log('Login admin riuscito');
       res.json({ role: 'admin', sessionId });
     } else if (username === 'preposto' && password === passwords.preposto) {
       const sessionId = Date.now().toString();
+      console.log('Creazione sessione preposto...');
       await Session.create({ role: 'preposto', sessionId });
+      console.log('Login preposto riuscito');
       res.json({ role: 'preposto', sessionId });
     } else {
+      console.log('Credenziali non valide per:', username);
       res.status(401).json({ error: 'Credenziali non valide' });
     }
   } catch (error) {
     console.error('Errore durante il login:', error);
-    res.status(500).json({ error: 'Errore durante il login' });
+    console.error('Stack trace:', error.stack);
+    console.error('Stato connessione MongoDB:', mongoose.connection.readyState);
+    res.status(503).json({ error: 'Database temporaneamente non disponibile' });
   }
 });
 
@@ -160,15 +257,29 @@ app.post('/api/logout', async (req, res) => {
 // Get active sessions count
 app.get('/api/active-sessions', async (req, res) => {
   try {
+    console.log('Recupero sessioni attive...');
+    console.log('Stato connessione MongoDB:', mongoose.connection.readyState);
+    
+    await checkConnection();
+    
+    if (mongoose.connection.readyState !== 1) {
+      console.error('Database non connesso. Stato:', mongoose.connection.readyState);
+      return res.status(503).json({ error: 'Database temporaneamente non disponibile' });
+    }
+
     const adminCount = await Session.countDocuments({ role: 'admin' });
     const prepostoCount = await Session.countDocuments({ role: 'preposto' });
+    console.log('Sessioni attive:', { admin: adminCount, preposto: prepostoCount });
+    
     res.json({
       admin: adminCount,
       preposto: prepostoCount
     });
   } catch (error) {
     console.error('Errore durante il recupero delle sessioni attive:', error);
-    res.status(500).json({ error: 'Errore durante il recupero delle sessioni attive' });
+    console.error('Stack trace:', error.stack);
+    console.error('Stato connessione MongoDB:', mongoose.connection.readyState);
+    res.status(503).json({ error: 'Database temporaneamente non disponibile' });
   }
 });
 
@@ -205,11 +316,16 @@ app.post('/api/cells', async (req, res) => {
       return res.status(404).json({ error: 'Cella non trovata' });
     }
 
-    cell.field_id = cellData.field_id || '';
-    cell.field_n = cellData.field_n || '';
-    cell.field_tr = cellData.field_tr || '';
-    cell.field_note = cellData.field_note || '';
-    cell.cards = cellData.cards;
+    // Aggiorna solo i campi delle cards
+    cell.cards = cellData.cards.map(card => ({
+      status: card.status || 'default',
+      startTime: card.startTime || null,
+      endTime: card.endTime || null,
+      TR: card.TR || '',
+      ID: card.ID || '',
+      N: card.N || '',
+      Note: card.Note || ''
+    }));
 
     await cell.save();
     
