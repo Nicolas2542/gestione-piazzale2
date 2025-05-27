@@ -88,9 +88,16 @@ function App() {
           data.forEach(item => {
             const cellIndex = parseInt(item.cell_number.split(' ')[1]) - 1;
             if (cellIndex >= 0 && cellIndex < updatedCells.length) {
-              updatedCells[cellIndex].cards[0].ID = item.field_id || '';
-              updatedCells[cellIndex].cards[0].N = item.field_n || '';
-              updatedCells[cellIndex].cards[0].Note = item.field_note || '';
+              // Aggiorna tutti i campi della cella
+              updatedCells[cellIndex].cards = item.cards.map(card => ({
+                status: card.status || 'default',
+                startTime: card.startTime || null,
+                endTime: card.endTime || null,
+                TR: card.TR || '',
+                ID: card.ID || '',
+                N: card.N || '',
+                Note: card.Note || ''
+              }));
             }
           });
           setCells(updatedCells);
@@ -103,7 +110,7 @@ function App() {
 
       loadData();
     }
-  }, [user, cells]);
+  }, [user]);
 
   // Polling per aggiornare i dati
   useEffect(() => {
@@ -199,14 +206,9 @@ function App() {
     if (user !== 'admin') return; // Only admin can modify data
     const newCells = [...cells];
     if (cardIndex !== null) {
-      if (field === 'TR') {
-        // Permetti qualsiasi input nel campo TR
-        newCells[cellIndex].cards[cardIndex].TR = value;
-      } else {
-        newCells[cellIndex].cards[cardIndex][field] = value;
-      }
+      // Gestisci tutti i campi allo stesso modo
+      newCells[cellIndex].cards[cardIndex][field] = value;
       setCells(newCells);
-      debouncedSave(cellIndex);
     }
   };
 
