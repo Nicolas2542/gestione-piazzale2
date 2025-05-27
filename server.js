@@ -321,16 +321,18 @@ app.post('/api/cells', async (req, res) => {
       return res.status(404).json({ error: 'Cella non trovata' });
     }
 
-    // Aggiorna solo i campi delle cards
-    cell.cards = cellData.cards.map(card => ({
-      status: card.status || 'default',
-      startTime: card.startTime || null,
-      endTime: card.endTime || null,
-      TR: card.TR || '',
-      ID: card.ID || '',
-      N: card.N || '',
-      Note: card.Note || ''
-    }));
+    // Aggiorna l'array cards con i nuovi dati
+    if (cellData.cards && Array.isArray(cellData.cards)) {
+      cell.cards = cellData.cards.map(card => ({
+        status: card.status || 'default',
+        startTime: card.startTime || null,
+        endTime: card.endTime || null,
+        TR: card.TR || '',
+        ID: card.ID || '',
+        N: card.N || '',
+        Note: card.Note || ''
+      }));
+    }
 
     console.log('Updated cell data:', cell);
     await cell.save();
