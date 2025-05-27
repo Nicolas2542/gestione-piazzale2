@@ -309,10 +309,15 @@ app.get('/api/cells', async (req, res) => {
 // Save cell data (admin)
 app.post('/api/cells', async (req, res) => {
   try {
+    console.log('=== DEBUG SERVER SAVE ===');
     const cellData = req.body;
+    console.log('Received data:', cellData);
+    
     const cell = await Cell.findOne({ cell_number: cellData.cell_number });
+    console.log('Found cell:', cell);
     
     if (!cell) {
+      console.log('Cell not found:', cellData.cell_number);
       return res.status(404).json({ error: 'Cella non trovata' });
     }
 
@@ -327,14 +332,21 @@ app.post('/api/cells', async (req, res) => {
       Note: card.Note || ''
     }));
 
+    console.log('Updated cell data:', cell);
     await cell.save();
+    console.log('Cell saved successfully');
     
     // Invalida la cache
     cellsCache = null;
     
+    // Verifica che i dati siano stati salvati
+    const savedCell = await Cell.findOne({ cell_number: cellData.cell_number });
+    console.log('Verified saved data:', savedCell);
+    
     res.json({ message: 'Dati salvati con successo' });
   } catch (error) {
     console.error('Errore durante il salvataggio:', error);
+    console.error('Stack trace:', error.stack);
     res.status(500).json({ error: 'Errore durante il salvataggio' });
   }
 });

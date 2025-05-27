@@ -260,7 +260,11 @@ function App() {
         }))
       };
 
-      console.log('Sending data to server:', cellData); // Debug log
+      console.log('=== DEBUG SAVE ===');
+      console.log('Cell Index:', cellIndex);
+      console.log('Cell Name:', cellName);
+      console.log('Current Cell Data:', cells[cellIndex]);
+      console.log('Sending to server:', cellData);
 
       const response = await fetch(`${API_URL}/api/cells`, {
         method: 'POST',
@@ -272,12 +276,36 @@ function App() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Server response:', errorData); // Debug log
+        console.error('Server response error:', errorData);
         throw new Error(errorData.error || 'Errore nel salvataggio');
       }
       
       const result = await response.json();
+      console.log('Server response success:', result);
       showNotification(result.message || 'Dati salvati con successo', 'success');
+
+      // Ricarica i dati dopo il salvataggio
+      const reloadResponse = await fetch(`${API_URL}/api/cells`);
+      if (reloadResponse.ok) {
+        const updatedData = await reloadResponse.json();
+        console.log('Reloaded data:', updatedData);
+        const updatedCells = [...cells];
+        updatedData.forEach(item => {
+          const cellIndex = parseInt(item.cell_number.split(' ')[1]) - 1;
+          if (cellIndex >= 0 && cellIndex < updatedCells.length) {
+            updatedCells[cellIndex].cards = item.cards.map(card => ({
+              status: card.status || 'default',
+              startTime: card.startTime || null,
+              endTime: card.endTime || null,
+              TR: card.TR || '',
+              ID: card.ID || '',
+              N: card.N || '',
+              Note: card.Note || ''
+            }));
+          }
+        });
+        setCells(updatedCells);
+      }
     } catch (error) {
       console.error('Error saving data:', error);
       showNotification('Impossibile salvare i dati. Verificare che il server sia in esecuzione.', 'error');
