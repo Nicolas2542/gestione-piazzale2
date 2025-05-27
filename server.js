@@ -311,10 +311,10 @@ app.post('/api/cells', async (req, res) => {
   try {
     console.log('=== DEBUG SERVER SAVE ===');
     const cellData = req.body;
-    console.log('Received data:', cellData);
+    console.log('Received data:', JSON.stringify(cellData, null, 2));
     
     const cell = await Cell.findOne({ cell_number: cellData.cell_number });
-    console.log('Found cell:', cell);
+    console.log('Found cell:', JSON.stringify(cell, null, 2));
     
     if (!cell) {
       console.log('Cell not found:', cellData.cell_number);
@@ -323,29 +323,54 @@ app.post('/api/cells', async (req, res) => {
 
     // Aggiorna l'array cards con i nuovi dati
     if (cellData.cards && Array.isArray(cellData.cards)) {
-      cell.cards = cellData.cards.map(card => ({
-        status: card.status || 'default',
-        startTime: card.startTime || null,
-        endTime: card.endTime || null,
-        TR: card.TR || '',
-        ID: card.ID || '',
-        N: card.N || '',
-        Note: card.Note || ''
-      }));
+      // Assicurati che l'array cards abbia sempre 4 elementi
+      while (cell.cards.length < 4) {
+        cell.cards.push({
+          status: 'default',
+          startTime: null,
+          endTime: null,
+          TR: '',
+          ID: '',
+          N: '',
+          Note: ''
+        });
+      }
+
+      // Aggiorna ogni card con i nuovi dati
+      cellData.cards.forEach((newCard, index) => {
+        if (index < cell.cards.length) {
+          cell.cards[index] = {
+            status: newCard.status || 'default',
+            startTime: newCard.startTime || null,
+            endTime: newCard.endTime || null,
+            TR: newCard.TR || '',
+            ID: newCard.ID || '',
+            N: newCard.N || '',
+            Note: newCard.Note || ''
+          };
+        }
+      });
     }
 
-    console.log('Updated cell data:', cell);
-    await cell.save();
-    console.log('Cell saved successfully');
+    console.log('Updated cell data:', JSON.stringify(cell, null, 2));
+    
+    // Usa findOneAndUpdate per assicurarsi che l'aggiornamento sia atomico
+    const updatedCell = await Cell.findOneAndUpdate(
+      { cell_number: cellData.cell_number },
+      { $set: { cards: cell.cards } },
+      { new: true, runValidators: true }
+    );
+    
+    console.log('Cell saved successfully:', JSON.stringify(updatedCell, null, 2));
     
     // Invalida la cache
     cellsCache = null;
     
     // Verifica che i dati siano stati salvati
     const savedCell = await Cell.findOne({ cell_number: cellData.cell_number });
-    console.log('Verified saved data:', savedCell);
+    console.log('Verified saved data:', JSON.stringify(savedCell, null, 2));
     
-    res.json({ message: 'Dati salvati con successo' });
+    res.json({ message: 'Dati salvati con successo', cell: savedCell });
   } catch (error) {
     console.error('Errore durante il salvataggio:', error);
     console.error('Stack trace:', error.stack);
