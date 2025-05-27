@@ -247,6 +247,12 @@ function App() {
         cellName = `Preparazione ${cellIndex - 13}`;
       }
 
+      // Verifica che i dati della cella esistano
+      if (!cells[cellIndex] || !cells[cellIndex].cards) {
+        console.error('Dati cella non validi:', cellIndex);
+        return;
+      }
+
       const cellData = {
         cell_number: cellName,
         cards: cells[cellIndex].cards.map(card => ({
@@ -284,28 +290,10 @@ function App() {
       console.log('Server response success:', result);
       showNotification(result.message || 'Dati salvati con successo', 'success');
 
-      // Ricarica i dati dopo il salvataggio
-      const reloadResponse = await fetch(`${API_URL}/api/cells`);
-      if (reloadResponse.ok) {
-        const updatedData = await reloadResponse.json();
-        console.log('Reloaded data:', updatedData);
-        const updatedCells = [...cells];
-        updatedData.forEach(item => {
-          const cellIndex = parseInt(item.cell_number.split(' ')[1]) - 1;
-          if (cellIndex >= 0 && cellIndex < updatedCells.length) {
-            updatedCells[cellIndex].cards = item.cards.map(card => ({
-              status: card.status || 'default',
-              startTime: card.startTime || null,
-              endTime: card.endTime || null,
-              TR: card.TR || '',
-              ID: card.ID || '',
-              N: card.N || '',
-              Note: card.Note || ''
-            }));
-          }
-        });
-        setCells(updatedCells);
-      }
+      // Non ricaricare i dati dal server, mantieni i dati locali
+      // Questo evita che i dati vengano cancellati
+      return;
+
     } catch (error) {
       console.error('Error saving data:', error);
       showNotification('Impossibile salvare i dati. Verificare che il server sia in esecuzione.', 'error');
