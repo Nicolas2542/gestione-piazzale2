@@ -135,6 +135,21 @@ async function initializeDatabase() {
   }
 }
 
+// Get active sessions endpoint
+app.get('/api/active-sessions', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT role, session_id, created_at 
+      FROM sessions 
+      ORDER BY created_at DESC
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Errore durante il recupero delle sessioni attive:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+});
+
 // Login endpoint
 app.post('/api/login', async (req, res) => {
   try {
