@@ -81,6 +81,46 @@ async function initializeDatabase() {
       )
     `);
     console.log('Tabella sessions verificata/creata con successo');
+
+    // Verifica se ci sono già celle nel database
+    const result = await client.query('SELECT COUNT(*) FROM cells');
+    console.log('Numero di celle nel database:', result.rows[0].count);
+    
+    if (result.rows[0].count === '0') {
+      console.log('Inizializzazione delle celle...');
+      // Inserisci le celle iniziali
+      const cells = Array(17).fill(null).map((_, index) => {
+        let cellNumber;
+        if (index < 10) {
+          cellNumber = `Buca ${index + 4}`;
+        } else if (index < 14) {
+          cellNumber = `Buca ${index + 16}`;
+        } else {
+          cellNumber = `Preparazione ${index - 13}`;
+        }
+        return {
+          cell_number: cellNumber,
+          cards: JSON.stringify(Array(4).fill(null).map(() => ({
+            status: 'default',
+            startTime: null,
+            endTime: null,
+            TR: '',
+            ID: '',
+            N: '',
+            Note: ''
+          })))
+        };
+      });
+
+      // Inserisci tutte le celle
+      for (const cell of cells) {
+        await client.query(
+          'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+          [cell.cell_number, cell.cards]
+        );
+      }
+      console.log('Celle inizializzate con successo');
+    }
     
     client.release();
     console.log('Database inizializzato con successo');
