@@ -197,11 +197,31 @@ app.get('/api/cells', async (req, res) => {
 app.post('/api/cells', async (req, res) => {
   try {
     const { cell_number, cards } = req.body;
-    await pool.query(
-      'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
-      [JSON.stringify(cards), cell_number]
+    console.log('Salvataggio cella:', { cell_number, cards });
+
+    // Verifica se la cella esiste
+    const checkResult = await pool.query(
+      'SELECT id FROM cells WHERE cell_number = $1',
+      [cell_number]
     );
-    res.json({ message: 'Cella aggiornata con successo' });
+
+    if (checkResult.rows.length === 0) {
+      // Se la cella non esiste, creala
+      await pool.query(
+        'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+        [cell_number, JSON.stringify(cards)]
+      );
+      console.log('Nuova cella creata:', cell_number);
+    } else {
+      // Se la cella esiste, aggiornala
+      await pool.query(
+        'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
+        [JSON.stringify(cards), cell_number]
+      );
+      console.log('Cella aggiornata:', cell_number);
+    }
+
+    res.json({ message: 'Cella salvata con successo' });
   } catch (error) {
     console.error('Errore durante il salvataggio della cella:', error);
     res.status(500).json({ error: 'Errore del server' });
