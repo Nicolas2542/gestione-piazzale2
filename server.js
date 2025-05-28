@@ -21,7 +21,7 @@ console.log('DATABASE_URL presente:', !!process.env.DATABASE_URL);
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]*@/, ':****@') : 'non presente');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:kRhTsfkIKAxinxiuzrSbAchalCsoXeAV@interchange.proxy.rlwy.net:29869/railway',
   ssl: {
     rejectUnauthorized: false
   }
@@ -56,86 +56,39 @@ let passwords = {
 async function initializeDatabase() {
   try {
     console.log('Tentativo di connessione al database...');
-    console.log('DATABASE_URL presente:', !!process.env.DATABASE_URL);
+    console.log('Configurazione database:', {
+      host: 'interchange.proxy.rlwy.net',
+      port: 29869,
+      database: 'railway',
+      user: 'postgres'
+    });
     
-    // Test della connessione
     const client = await pool.connect();
-    console.log('Connessione al database riuscita');
+    console.log('Connessione al database riuscita!');
     
-    try {
-      // Crea la tabella cells se non esiste
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS cells (
-          id SERIAL PRIMARY KEY,
-          cell_number VARCHAR(50) UNIQUE NOT NULL,
-          cards JSONB NOT NULL,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      console.log('Tabella cells creata/verificata');
-
-      // Crea la tabella sessions se non esiste
-      await client.query(`
-        CREATE TABLE IF NOT EXISTS sessions (
-          id SERIAL PRIMARY KEY,
-          role VARCHAR(50) NOT NULL,
-          session_id VARCHAR(100) UNIQUE NOT NULL,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-        )
-      `);
-      console.log('Tabella sessions creata/verificata');
-
-      // Verifica se ci sono già celle nel database
-      const result = await client.query('SELECT COUNT(*) FROM cells');
-      console.log('Numero di celle nel database:', result.rows[0].count);
-      
-      if (result.rows[0].count === '0') {
-        console.log('Inizializzazione delle celle...');
-        // Inserisci le celle iniziali
-        const cells = Array(17).fill(null).map((_, index) => {
-          let cellNumber;
-          if (index < 10) {
-            cellNumber = `Buca ${index + 4}`;
-          } else if (index < 14) {
-            cellNumber = `Buca ${index + 16}`;
-          } else {
-            cellNumber = `Preparazione ${index - 13}`;
-          }
-          return {
-            cell_number: cellNumber,
-            cards: JSON.stringify(Array(4).fill(null).map(() => ({
-              status: 'default',
-              startTime: null,
-              endTime: null,
-              TR: '',
-              ID: '',
-              N: '',
-              Note: ''
-            })))
-          };
-        });
-
-        // Inserisci tutte le celle
-        for (const cell of cells) {
-          await client.query(
-            'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
-            [cell.cell_number, cell.cards]
-          );
-        }
-        console.log('Database inizializzato con successo');
-      }
-    } finally {
-      client.release();
-    }
+    // Crea la tabella cells se non esiste
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS cells (
+        id SERIAL PRIMARY KEY,
+        row INTEGER NOT NULL,
+        col INTEGER NOT NULL,
+        content TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabella cells verificata/creata con successo');
+    
+    client.release();
+    console.log('Database inizializzato con successo');
   } catch (error) {
     console.error('Errore durante l\'inizializzazione del database:', error);
-    console.error('Stack trace:', error.stack);
     console.error('Dettagli errore:', {
       name: error.name,
       code: error.code,
       message: error.message
     });
+    throw error;
   }
 }
 
