@@ -208,11 +208,28 @@ app.get('/api/cells', async (req, res) => {
   }
 });
 
+// Funzione per convertire row/col in cell_number
+function getCellNumber(row, col) {
+  if (row === 0) {
+    return `Buca ${col + 4}`;
+  } else if (row === 1) {
+    return `Buca ${col + 16}`;
+  } else if (row === 2) {
+    return `Preparazione ${col + 1}`;
+  }
+  return null;
+}
+
 // Save cell endpoint
 app.post('/api/cells', async (req, res) => {
   try {
-    const { cell_number, cards } = req.body;
-    console.log('Salvataggio cella:', { cell_number, cards });
+    const { row, col, cards } = req.body;
+    console.log('Salvataggio cella:', { row, col, cards });
+
+    const cell_number = getCellNumber(row, col);
+    if (!cell_number) {
+      return res.status(400).json({ error: 'Coordinata cella non valida' });
+    }
 
     // Verifica se la cella esiste
     const checkResult = await pool.query(
