@@ -58,6 +58,11 @@ function Login({ onLogin }) {
     e.preventDefault();
     setError('');
     
+    if (!credentials.username || !credentials.password) {
+      setError('Inserisci username e password');
+      return;
+    }
+    
     try {
       const response = await fetch(`${API_URL}/api/login`, {
         method: 'POST',
@@ -67,16 +72,18 @@ function Login({ onLogin }) {
         body: JSON.stringify(credentials),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Credenziali non valide');
+        throw new Error(data.error || 'Errore durante il login');
       }
 
-      const data = await response.json();
       // Salva la sessione nel localStorage
       localStorage.setItem('session', JSON.stringify(data));
       onLogin(data.role, data.sessionId);
     } catch (error) {
-      setError(error.message);
+      console.error('Login error:', error);
+      setError(error.message || 'Errore durante il login. Verifica le credenziali e riprova.');
     }
   };
 

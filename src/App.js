@@ -306,9 +306,45 @@ function App() {
       console.log('Server response success:', result);
       showNotification(result.message || 'Dati salvati con successo', 'success');
 
-      // Non ricaricare i dati dal server, mantieni i dati locali
-      // Questo evita che i dati vengano cancellati
-      return;
+      // Ricarica i dati dal server dopo il salvataggio
+      const updatedResponse = await fetch(`${API_URL}/api/cells`);
+      if (!updatedResponse.ok) {
+        throw new Error('Errore nel caricamento dei dati aggiornati');
+      }
+      const updatedData = await updatedResponse.json();
+      
+      // Aggiorna lo stato locale con i dati aggiornati
+      const updatedCells = [...cells];
+      updatedData.forEach(item => {
+        let cellIndex;
+        const cellNumber = item.cell_number;
+        
+        if (cellNumber.startsWith('Buca')) {
+          const num = parseInt(cellNumber.split(' ')[1]);
+          if (num >= 4 && num <= 13) {
+            cellIndex = num - 4;
+          } else if (num >= 30 && num <= 33) {
+            cellIndex = num - 20;
+          }
+        } else if (cellNumber.startsWith('Preparazione')) {
+          const num = parseInt(cellNumber.split(' ')[1]);
+          cellIndex = num + 13;
+        }
+
+        if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < updatedCells.length) {
+          updatedCells[cellIndex].cards = item.cards.map(card => ({
+            status: card.status || 'default',
+            startTime: card.startTime || null,
+            endTime: card.endTime || null,
+            TR: card.TR || '',
+            ID: card.ID || '',
+            N: card.N || '',
+            Note: card.Note || ''
+          }));
+        }
+      });
+      
+      setCells(updatedCells);
 
     } catch (error) {
       console.error('Error saving data:', error);
