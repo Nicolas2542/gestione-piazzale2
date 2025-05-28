@@ -15,13 +15,13 @@ app.use(cors({
 
 app.use(express.json());
 
-// Configurazione del pool PostgreSQL
+// Configurazione del database
 console.log('=== CONFIGURAZIONE DATABASE ===');
 console.log('DATABASE_URL presente:', !!process.env.DATABASE_URL);
 console.log('DATABASE_URL:', process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]*@/, ':****@') : 'non presente');
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://postgres:kRhTsfkIKAxinxiuzrSbAchalCsoXeAV@interchange.proxy.rlwy.net:29869/railway',
+  connectionString: process.env.DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
   }
@@ -52,17 +52,10 @@ let passwords = {
   preposto: 'preposto123'
 };
 
-// Funzione per inizializzare il database
+// Inizializzazione del database
 async function initializeDatabase() {
   try {
     console.log('Tentativo di connessione al database...');
-    console.log('Configurazione database:', {
-      host: 'interchange.proxy.rlwy.net',
-      port: 29869,
-      database: 'railway',
-      user: 'postgres'
-    });
-    
     const client = await pool.connect();
     console.log('Connessione al database riuscita!');
     
@@ -70,11 +63,10 @@ async function initializeDatabase() {
     await client.query(`
       CREATE TABLE IF NOT EXISTS cells (
         id SERIAL PRIMARY KEY,
-        row INTEGER NOT NULL,
-        col INTEGER NOT NULL,
-        content TEXT,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        cell_number VARCHAR(50) UNIQUE NOT NULL,
+        cards JSONB NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       )
     `);
     console.log('Tabella cells verificata/creata con successo');
@@ -166,7 +158,10 @@ app.post('/api/cells', async (req, res) => {
 });
 
 // Initialize database on startup
-initializeDatabase();
+initializeDatabase().catch(error => {
+  console.error('Errore fatale durante l\'inizializzazione del database:', error);
+  process.exit(1);
+});
 
 app.listen(port, () => {
   console.log(`Server in esecuzione sulla porta ${port}`);
