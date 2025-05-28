@@ -223,10 +223,18 @@ function getCellNumber(row, col) {
 // Save cell endpoint
 app.post('/api/cells', async (req, res) => {
   try {
-    const { row, col, cards } = req.body;
-    console.log('Salvataggio cella:', { row, col, cards });
+    let cell_number;
+    const { row, col, cell_number: directCellNumber, cards } = req.body;
+    console.log('Salvataggio cella:', { row, col, directCellNumber, cards });
 
-    const cell_number = getCellNumber(row, col);
+    if (directCellNumber) {
+      // Se viene fornito direttamente cell_number, usalo
+      cell_number = directCellNumber;
+    } else if (row !== undefined && col !== undefined) {
+      // Altrimenti converti row/col in cell_number
+      cell_number = getCellNumber(row, col);
+    }
+
     if (!cell_number) {
       return res.status(400).json({ error: 'Coordinata cella non valida' });
     }
