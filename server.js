@@ -70,6 +70,17 @@ async function initializeDatabase() {
       )
     `);
     console.log('Tabella cells verificata/creata con successo');
+
+    // Crea la tabella sessions se non esiste
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id SERIAL PRIMARY KEY,
+        role VARCHAR(50) NOT NULL,
+        session_id VARCHAR(100) UNIQUE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabella sessions verificata/creata con successo');
     
     client.release();
     console.log('Database inizializzato con successo');
