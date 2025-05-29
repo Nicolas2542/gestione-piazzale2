@@ -976,7 +976,7 @@ function App() {
                               color="primary"
                               size="small"
                               fullWidth
-                              onClick={() => saveCellData(index)}
+                              onClick={() => saveCellData(actualIndex)}
                               sx={{ 
                                 py: 0.15,
                                 fontSize: '0.65rem',
