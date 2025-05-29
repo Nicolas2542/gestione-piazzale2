@@ -415,13 +415,9 @@ function App() {
         // First confirmation - turn yellow and set start time
         newCells[cellIndex].cards[cardIndex].status = 'yellow';
         newCells[cellIndex].cards[cardIndex].startTime = new Date().toISOString();
-        setCells(newCells);
-        setConfirmationDialog({ open: false, cellIndex: null, cardIndex: null, step: 1 });
       } else {
         // User clicked No on first confirmation
         newCells[cellIndex].cards[cardIndex].status = 'red';
-        setCells(newCells);
-        setConfirmationDialog({ open: false, cellIndex: null, cardIndex: null, step: 1 });
       }
     } else if (currentStatus === 'yellow') {
       if (confirmed) {
@@ -429,25 +425,38 @@ function App() {
         newCells[cellIndex].cards[cardIndex].status = 'green';
         newCells[cellIndex].cards[cardIndex].endTime = new Date().toISOString();
       }
-      setCells(newCells);
-      setConfirmationDialog({ open: false, cellIndex: null, cardIndex: null, step: 1 });
     }
+
+    // Aggiorna lo stato locale
+    setCells(newCells);
+    setConfirmationDialog({ open: false, cellIndex: null, cardIndex: null, step: 1 });
 
     // Salva le modifiche sul server
     try {
-      await fetch(`${API_URL}/api/preposto-changes`, {
+      console.log('=== DEBUG PREPOSTO SAVE ===');
+      console.log('Cell Index:', cellIndex);
+      console.log('Card Index:', cardIndex);
+      console.log('New Status:', newCells[cellIndex].cards[cardIndex].status);
+      console.log('Start Time:', newCells[cellIndex].cards[cardIndex].startTime);
+      console.log('End Time:', newCells[cellIndex].cards[cardIndex].endTime);
+
+      const response = await fetch(`${API_URL}/api/cells`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cellIndex,
-          cardIndex,
-          status: newCells[cellIndex].cards[cardIndex].status,
-          startTime: newCells[cellIndex].cards[cardIndex].startTime,
-          endTime: newCells[cellIndex].cards[cardIndex].endTime
+          cell_number: newCells[cellIndex].id,
+          cards: newCells[cellIndex].cards
         }),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || error.error || 'Errore del server');
+      }
+
+      showNotification('Modifiche salvate con successo', 'success');
     } catch (error) {
       console.error('Error saving preposto changes:', error);
       showNotification('Errore nel salvataggio delle modifiche', 'error');
