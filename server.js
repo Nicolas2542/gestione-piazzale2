@@ -278,11 +278,11 @@ app.post('/api/cells', async (req, res) => {
       console.log('Creazione nuova cella:', cell_number);
       try {
         // Se la cella non esiste, creala
-        await pool.query(
-          'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+        const result = await pool.query(
+          'INSERT INTO cells (cell_number, cards) VALUES ($1, $2) RETURNING id',
           [cell_number, JSON.stringify(cards)]
         );
-        console.log('Nuova cella creata con successo:', cell_number);
+        console.log('Nuova cella creata con successo:', cell_number, 'ID:', result.rows[0].id);
       } catch (error) {
         console.error('Errore durante la creazione della cella:', error);
         throw new Error(`Errore durante la creazione della cella: ${error.message}`);
@@ -317,11 +317,11 @@ app.post('/api/cells', async (req, res) => {
 
         console.log('Updated cards:', JSON.stringify(updatedCards, null, 2));
 
-        await pool.query(
-          'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
+        const result = await pool.query(
+          'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2 RETURNING id',
           [JSON.stringify(updatedCards), cell_number]
         );
-        console.log('Cella aggiornata con successo:', cell_number);
+        console.log('Cella aggiornata con successo:', cell_number, 'ID:', result.rows[0].id);
       } catch (error) {
         console.error('Errore durante l\'aggiornamento della cella:', error);
         throw new Error(`Errore durante l'aggiornamento della cella: ${error.message}`);
