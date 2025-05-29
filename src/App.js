@@ -95,7 +95,7 @@ function App() {
               if (num >= 4 && num <= 13) {
                 cellIndex = num - 4;  // Buca 4 -> index 0, Buca 13 -> index 9
               } else if (num >= 30 && num <= 33) {
-                cellIndex = num - 20;  // Buca 30 -> index 10, Buca 33 -> index 13
+                cellIndex = num - 16;  // Buca 30 -> index 10, Buca 33 -> index 13
               }
             } else if (cellNumber.startsWith('Preparazione')) {
               const num = parseInt(cellNumber.split(' ')[1]);
@@ -324,7 +324,7 @@ function App() {
           if (num >= 4 && num <= 13) {
             cellIndex = num - 4;
           } else if (num >= 30 && num <= 33) {
-            cellIndex = num - 20;
+            cellIndex = num - 16;
           }
         } else if (cellNumber.startsWith('Preparazione')) {
           const num = parseInt(cellNumber.split(' ')[1]);
