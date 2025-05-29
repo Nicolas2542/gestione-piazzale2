@@ -433,8 +433,19 @@ function App() {
 
     // Salva le modifiche sul server
     try {
+      // Determina il nome della cella in base all'indice
+      let cellName;
+      if (cellIndex < 10) {
+        cellName = `Buca ${cellIndex + 4}`;
+      } else if (cellIndex < 14) {
+        cellName = `Buca ${cellIndex + 16}`;
+      } else {
+        cellName = `Preparazione ${cellIndex - 13}`;
+      }
+
       console.log('=== DEBUG PREPOSTO SAVE ===');
       console.log('Cell Index:', cellIndex);
+      console.log('Cell Name:', cellName);
       console.log('Card Index:', cardIndex);
       console.log('New Status:', newCells[cellIndex].cards[cardIndex].status);
       console.log('Start Time:', newCells[cellIndex].cards[cardIndex].startTime);
@@ -446,8 +457,16 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cell_number: newCells[cellIndex].id,
-          cards: newCells[cellIndex].cards
+          cell_number: cellName,
+          cards: newCells[cellIndex].cards.map(card => ({
+            status: card.status || 'default',
+            startTime: card.startTime || null,
+            endTime: card.endTime || null,
+            TR: card.TR || '',
+            ID: card.ID || '',
+            N: card.N || '',
+            Note: card.Note || ''
+          }))
         }),
       });
 
