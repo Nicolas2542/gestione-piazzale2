@@ -402,12 +402,34 @@ function App() {
     }
   };
 
+  const handleResetColors = () => {
+    if (user !== 'admin') return;
+    const newCells = [...cells];
+    newCells.forEach(cell => {
+      cell.cards = cell.cards.map(card => ({
+        ...card,  // Mantiene tutti i dati esistenti
+        status: 'default'  // Resetta solo lo stato
+      }));
+    });
+    setCells(newCells);
+    setResetColorsDialog({ open: false });
+    showNotification('Colori resettati con successo', 'success');
+    
+    // Try to save the reset state to the server
+    saveCellData(0).catch(error => {
+      console.error('Error saving reset state:', error);
+      showNotification('I colori sono stati resettati localmente, ma non è stato possibile salvare lo stato sul server.', 'warning');
+    });
+  };
+
   const handlePrepostoConfirmation = async (cellIndex, cardIndex, confirmed) => {
     if (cellIndex === null || cardIndex === null || !cells[cellIndex] || !cells[cellIndex].cards[cardIndex]) {
       console.error('Invalid cell or card index');
       return;
     }
-    const newCells = [...cells];
+
+    // Crea una copia profonda delle celle per evitare mutazioni indesiderate
+    const newCells = JSON.parse(JSON.stringify(cells));
     const currentStatus = newCells[cellIndex].cards[cardIndex].status;
 
     if (currentStatus === 'default') {
@@ -458,15 +480,7 @@ function App() {
         },
         body: JSON.stringify({
           cell_number: cellName,
-          cards: newCells[cellIndex].cards.map(card => ({
-            status: card.status || 'default',
-            startTime: card.startTime || null,
-            endTime: card.endTime || null,
-            TR: card.TR || '',
-            ID: card.ID || '',
-            N: card.N || '',
-            Note: card.Note || ''
-          }))
+          cards: newCells[cellIndex].cards
         }),
       });
 
@@ -480,23 +494,6 @@ function App() {
       console.error('Error saving preposto changes:', error);
       showNotification('Errore nel salvataggio delle modifiche', 'error');
     }
-  };
-
-  const handleResetColors = () => {
-    if (user !== 'admin') return;
-    const newCells = [...cells];
-    newCells.forEach(cell => {
-      cell.cards = cell.cards.map(() => ({ status: 'default' }));
-    });
-    setCells(newCells);
-    setResetColorsDialog({ open: false });
-    showNotification('Colori resettati con successo', 'success');
-    
-    // Try to save the reset state to the server
-    saveCellData(0).catch(error => {
-      console.error('Error saving reset state:', error);
-      showNotification('I colori sono stati resettati localmente, ma non è stato possibile salvare lo stato sul server.', 'warning');
-    });
   };
 
   const handlePasswordChange = async () => {
