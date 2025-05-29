@@ -73,17 +73,30 @@ async function initializeDatabase() {
     const client = await pool.connect();
     console.log('Connessione al database riuscita!');
     
-    // Crea la tabella cells se non esiste
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS cells (
-        id SERIAL PRIMARY KEY,
-        cell_number VARCHAR(50) UNIQUE NOT NULL,
-        cards JSONB NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      )
+    // Verifica se la tabella cells esiste
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'cells'
+      );
     `);
-    console.log('Tabella cells verificata/creata con successo');
+    
+    if (!tableCheck.rows[0].exists) {
+      console.log('Tabella cells non trovata, creazione in corso...');
+      // Crea la tabella cells se non esiste
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS cells (
+          id SERIAL PRIMARY KEY,
+          cell_number VARCHAR(50) UNIQUE NOT NULL,
+          cards JSONB NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      console.log('Tabella cells creata con successo');
+    } else {
+      console.log('Tabella cells già esistente');
+    }
 
     // Crea la tabella sessions se non esiste
     await client.query(`
@@ -129,11 +142,11 @@ async function initializeDatabase() {
       // Inserisci tutte le celle
       for (const cell of cells) {
         try {
-          await client.query(
-            'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+          const insertResult = await client.query(
+            'INSERT INTO cells (cell_number, cards) VALUES ($1, $2) RETURNING id',
             [cell.cell_number, cell.cards]
           );
-          console.log('Cella inserita:', cell.cell_number);
+          console.log('Cella inserita:', cell.cell_number, 'ID:', insertResult.rows[0].id);
         } catch (error) {
           console.error('Errore durante l\'inserimento della cella:', cell.cell_number, error);
         }
