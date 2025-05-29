@@ -255,35 +255,27 @@ function getCellNumber(row, col) {
 
 // Save cell endpoint
 app.post('/api/cells', async (req, res) => {
+  let client;
   try {
-    // Test della connessione al database prima di procedere
-    const isConnected = await testDatabaseConnection();
-    if (!isConnected) {
-      throw new Error('Impossibile connettersi al database');
-    }
-
-    let cell_number;
-    const { row, col, cell_number: directCellNumber, cards } = req.body;
     console.log('=== DEBUG SERVER SAVE ===');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
 
-    if (directCellNumber) {
-      cell_number = directCellNumber;
-    } else if (row !== undefined && col !== undefined) {
-      cell_number = getCellNumber(row, col);
-    }
+    // Test della connessione al database
+    client = await pool.connect();
+    console.log('Connessione al database riuscita');
 
-    if (!cell_number) {
-      console.error('Coordinata cella non valida:', { row, col, directCellNumber });
-      return res.status(400).json({ error: 'Coordinata cella non valida' });
+    const { cell_number, cards } = req.body;
+    if (!cell_number || !cards) {
+      console.error('Dati mancanti:', { cell_number, cards });
+      return res.status(400).json({ error: 'Dati mancanti' });
     }
 
     console.log('Cell number:', cell_number);
     console.log('Cards:', JSON.stringify(cards, null, 2));
 
     // Verifica se la cella esiste
-    const checkResult = await pool.query(
-      'SELECT id FROM cells WHERE cell_number = $1',
+    const checkResult = await client.query(
+      'SELECT id, cards FROM cells WHERE cell_number = $1',
       [cell_number]
     );
 
@@ -291,7 +283,7 @@ app.post('/api/cells', async (req, res) => {
       console.log('Creazione nuova cella:', cell_number);
       try {
         // Se la cella non esiste, creala
-        const result = await pool.query(
+        const result = await client.query(
           'INSERT INTO cells (cell_number, cards) VALUES ($1, $2) RETURNING id',
           [cell_number, JSON.stringify(cards)]
         );
@@ -303,36 +295,10 @@ app.post('/api/cells', async (req, res) => {
     } else {
       console.log('Aggiornamento cella esistente:', cell_number);
       try {
-        // Se la cella esiste, aggiorna mantenendo i dati esistenti
-        const existingCell = await pool.query(
-          'SELECT cards FROM cells WHERE cell_number = $1',
-          [cell_number]
-        );
-        
-        const existingCards = JSON.parse(existingCell.rows[0].cards);
-        console.log('Existing cards:', JSON.stringify(existingCards, null, 2));
-        
-        const updatedCards = cards.map((newCard, index) => {
-          const existingCard = existingCards[index] || {};
-          return {
-            ...existingCard,
-            ...newCard,
-            // Mantieni i campi vuoti se non sono stati modificati
-            TR: newCard.TR || existingCard.TR || '',
-            ID: newCard.ID || existingCard.ID || '',
-            N: newCard.N || existingCard.N || '',
-            Note: newCard.Note || existingCard.Note || '',
-            status: newCard.status || existingCard.status || 'default',
-            startTime: newCard.startTime || existingCard.startTime || null,
-            endTime: newCard.endTime || existingCard.endTime || null
-          };
-        });
-
-        console.log('Updated cards:', JSON.stringify(updatedCards, null, 2));
-
-        const result = await pool.query(
+        // Se la cella esiste, aggiorna i dati
+        const result = await client.query(
           'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2 RETURNING id',
-          [JSON.stringify(updatedCards), cell_number]
+          [JSON.stringify(cards), cell_number]
         );
         console.log('Cella aggiornata con successo:', cell_number, 'ID:', result.rows[0].id);
       } catch (error) {
@@ -355,6 +321,10 @@ app.post('/api/cells', async (req, res) => {
       details: error.message,
       type: error.name
     });
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 });
 
