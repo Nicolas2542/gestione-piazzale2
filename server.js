@@ -253,10 +253,32 @@ app.post('/api/cells', async (req, res) => {
       );
       console.log('Nuova cella creata:', cell_number);
     } else {
-      // Se la cella esiste, aggiornala
+      // Se la cella esiste, aggiorna mantenendo i dati esistenti
+      const existingCell = await pool.query(
+        'SELECT cards FROM cells WHERE cell_number = $1',
+        [cell_number]
+      );
+      
+      const existingCards = JSON.parse(existingCell.rows[0].cards);
+      const updatedCards = cards.map((newCard, index) => {
+        const existingCard = existingCards[index] || {};
+        return {
+          ...existingCard,
+          ...newCard,
+          // Mantieni i campi vuoti se non sono stati modificati
+          TR: newCard.TR || existingCard.TR || '',
+          ID: newCard.ID || existingCard.ID || '',
+          N: newCard.N || existingCard.N || '',
+          Note: newCard.Note || existingCard.Note || '',
+          status: newCard.status || existingCard.status || 'default',
+          startTime: newCard.startTime || existingCard.startTime || null,
+          endTime: newCard.endTime || existingCard.endTime || null
+        };
+      });
+
       await pool.query(
         'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
-        [JSON.stringify(cards), cell_number]
+        [JSON.stringify(updatedCards), cell_number]
       );
       console.log('Cella aggiornata:', cell_number);
     }

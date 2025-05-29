@@ -757,11 +757,7 @@ function App() {
                           color="primary"
                           size="small"
                           fullWidth
-                          onClick={() => {
-                            // Calcola l'indice corretto per le celle da buca 30 in poi
-                            const actualIndex = index + 10;
-                            saveCellData(actualIndex);
-                          }}
+                          onClick={() => saveCellData(index)}
                           sx={{ 
                             py: 0.15,
                             fontSize: '0.65rem',
@@ -952,7 +948,7 @@ function App() {
                               color="primary"
                               size="small"
                               fullWidth
-                              onClick={() => saveCellData(actualIndex)}
+                              onClick={() => saveCellData(index)}
                               sx={{ 
                                 py: 0.15,
                                 fontSize: '0.65rem',
