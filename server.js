@@ -68,6 +68,7 @@ let passwords = {
 // Inizializzazione del database
 async function initializeDatabase() {
   try {
+    console.log('=== INIZIALIZZAZIONE DATABASE ===');
     console.log('Tentativo di connessione al database...');
     const client = await pool.connect();
     console.log('Connessione al database riuscita!');
@@ -127,10 +128,15 @@ async function initializeDatabase() {
 
       // Inserisci tutte le celle
       for (const cell of cells) {
-        await client.query(
-          'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
-          [cell.cell_number, cell.cards]
-        );
+        try {
+          await client.query(
+            'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+            [cell.cell_number, cell.cards]
+          );
+          console.log('Cella inserita:', cell.cell_number);
+        } catch (error) {
+          console.error('Errore durante l\'inserimento della cella:', cell.cell_number, error);
+        }
       }
       console.log('Celle inizializzate con successo');
     }
@@ -138,11 +144,12 @@ async function initializeDatabase() {
     client.release();
     console.log('Database inizializzato con successo');
   } catch (error) {
-    console.error('Errore durante l\'inizializzazione del database:', error);
+    console.error('=== ERRORE INIZIALIZZAZIONE DATABASE ===');
     console.error('Dettagli errore:', {
       name: error.name,
       code: error.code,
-      message: error.message
+      message: error.message,
+      stack: error.stack
     });
     throw error;
   }
