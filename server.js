@@ -345,6 +345,69 @@ app.post('/api/cells', async (req, res) => {
   }
 });
 
+// Preposto changes endpoint
+app.post('/api/preposto-changes', async (req, res) => {
+  try {
+    const { cellIndex, cardIndex, status, startTime, endTime } = req.body;
+    console.log('=== DEBUG PREPOSTO CHANGES ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+
+    // Converti l'indice della cella nel numero della cella
+    let cellNumber;
+    if (cellIndex < 10) {
+      cellNumber = `Buca ${cellIndex + 4}`;
+    } else if (cellIndex < 14) {
+      cellNumber = `Buca ${cellIndex + 16}`;
+    } else {
+      cellNumber = `Preparazione ${cellIndex - 13}`;
+    }
+
+    console.log('Cell number:', cellNumber);
+
+    // Recupera la cella esistente
+    const existingCell = await pool.query(
+      'SELECT cards FROM cells WHERE cell_number = $1',
+      [cellNumber]
+    );
+
+    if (existingCell.rows.length === 0) {
+      console.error('Cella non trovata:', cellNumber);
+      return res.status(404).json({ error: 'Cella non trovata' });
+    }
+
+    // Aggiorna solo i campi specifici della card
+    const existingCards = JSON.parse(existingCell.rows[0].cards);
+    existingCards[cardIndex] = {
+      ...existingCards[cardIndex],
+      status,
+      startTime,
+      endTime
+    };
+
+    // Salva le modifiche
+    await pool.query(
+      'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
+      [JSON.stringify(existingCards), cellNumber]
+    );
+
+    console.log('Modifiche preposto salvate con successo');
+    res.json({ message: 'Modifiche salvate con successo' });
+  } catch (error) {
+    console.error('=== ERRORE SALVATAGGIO MODIFICHE PREPOSTO ===');
+    console.error('Dettagli errore:', {
+      name: error.name,
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      error: 'Errore del server', 
+      details: error.message,
+      type: error.name
+    });
+  }
+});
+
 // Initialize database on startup
 initializeDatabase().catch(error => {
   console.error('Errore fatale durante l\'inizializzazione del database:', error);
