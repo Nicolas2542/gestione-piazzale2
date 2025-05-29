@@ -225,19 +225,22 @@ app.post('/api/cells', async (req, res) => {
   try {
     let cell_number;
     const { row, col, cell_number: directCellNumber, cards } = req.body;
-    console.log('Salvataggio cella:', { row, col, directCellNumber, cards });
+    console.log('=== DEBUG SERVER SAVE ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
 
     if (directCellNumber) {
-      // Se viene fornito direttamente cell_number, usalo
       cell_number = directCellNumber;
     } else if (row !== undefined && col !== undefined) {
-      // Altrimenti converti row/col in cell_number
       cell_number = getCellNumber(row, col);
     }
 
     if (!cell_number) {
+      console.error('Coordinata cella non valida:', { row, col, directCellNumber });
       return res.status(400).json({ error: 'Coordinata cella non valida' });
     }
+
+    console.log('Cell number:', cell_number);
+    console.log('Cards:', JSON.stringify(cards, null, 2));
 
     // Verifica se la cella esiste
     const checkResult = await pool.query(
@@ -246,13 +249,15 @@ app.post('/api/cells', async (req, res) => {
     );
 
     if (checkResult.rows.length === 0) {
+      console.log('Creazione nuova cella:', cell_number);
       // Se la cella non esiste, creala
       await pool.query(
         'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
         [cell_number, JSON.stringify(cards)]
       );
-      console.log('Nuova cella creata:', cell_number);
+      console.log('Nuova cella creata con successo:', cell_number);
     } else {
+      console.log('Aggiornamento cella esistente:', cell_number);
       // Se la cella esiste, aggiorna mantenendo i dati esistenti
       const existingCell = await pool.query(
         'SELECT cards FROM cells WHERE cell_number = $1',
@@ -260,6 +265,8 @@ app.post('/api/cells', async (req, res) => {
       );
       
       const existingCards = JSON.parse(existingCell.rows[0].cards);
+      console.log('Existing cards:', JSON.stringify(existingCards, null, 2));
+      
       const updatedCards = cards.map((newCard, index) => {
         const existingCard = existingCards[index] || {};
         return {
@@ -276,17 +283,25 @@ app.post('/api/cells', async (req, res) => {
         };
       });
 
+      console.log('Updated cards:', JSON.stringify(updatedCards, null, 2));
+
       await pool.query(
         'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
         [JSON.stringify(updatedCards), cell_number]
       );
-      console.log('Cella aggiornata:', cell_number);
+      console.log('Cella aggiornata con successo:', cell_number);
     }
 
     res.json({ message: 'Cella salvata con successo' });
   } catch (error) {
-    console.error('Errore durante il salvataggio della cella:', error);
-    res.status(500).json({ error: 'Errore del server' });
+    console.error('=== ERRORE SALVATAGGIO CELLA ===');
+    console.error('Dettagli errore:', {
+      name: error.name,
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ error: 'Errore del server', details: error.message });
   }
 });
 

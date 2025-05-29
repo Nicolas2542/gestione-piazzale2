@@ -285,8 +285,8 @@ function App() {
       console.log('=== DEBUG SAVE ===');
       console.log('Cell Index:', cellIndex);
       console.log('Cell Name:', cellName);
-      console.log('Current Cell Data:', cells[cellIndex]);
-      console.log('Sending to server:', cellData);
+      console.log('Current Cell Data:', JSON.stringify(cells[cellIndex], null, 2));
+      console.log('Sending to server:', JSON.stringify(cellData, null, 2));
 
       const response = await fetch(`${API_URL}/api/cells`, {
         method: 'POST',
