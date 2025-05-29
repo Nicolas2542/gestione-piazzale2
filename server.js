@@ -43,6 +43,19 @@ pool.on('error', (err) => {
   });
 });
 
+// Funzione per testare la connessione al database
+async function testDatabaseConnection() {
+  try {
+    const client = await pool.connect();
+    console.log('Test connessione database riuscito');
+    client.release();
+    return true;
+  } catch (error) {
+    console.error('Test connessione database fallito:', error);
+    return false;
+  }
+}
+
 // Serve static files from the React build directory
 app.use(express.static(path.join(__dirname, 'build')));
 
@@ -223,6 +236,12 @@ function getCellNumber(row, col) {
 // Save cell endpoint
 app.post('/api/cells', async (req, res) => {
   try {
+    // Test della connessione al database prima di procedere
+    const isConnected = await testDatabaseConnection();
+    if (!isConnected) {
+      throw new Error('Impossibile connettersi al database');
+    }
+
     let cell_number;
     const { row, col, cell_number: directCellNumber, cards } = req.body;
     console.log('=== DEBUG SERVER SAVE ===');
@@ -250,46 +269,56 @@ app.post('/api/cells', async (req, res) => {
 
     if (checkResult.rows.length === 0) {
       console.log('Creazione nuova cella:', cell_number);
-      // Se la cella non esiste, creala
-      await pool.query(
-        'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
-        [cell_number, JSON.stringify(cards)]
-      );
-      console.log('Nuova cella creata con successo:', cell_number);
+      try {
+        // Se la cella non esiste, creala
+        await pool.query(
+          'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+          [cell_number, JSON.stringify(cards)]
+        );
+        console.log('Nuova cella creata con successo:', cell_number);
+      } catch (error) {
+        console.error('Errore durante la creazione della cella:', error);
+        throw new Error(`Errore durante la creazione della cella: ${error.message}`);
+      }
     } else {
       console.log('Aggiornamento cella esistente:', cell_number);
-      // Se la cella esiste, aggiorna mantenendo i dati esistenti
-      const existingCell = await pool.query(
-        'SELECT cards FROM cells WHERE cell_number = $1',
-        [cell_number]
-      );
-      
-      const existingCards = JSON.parse(existingCell.rows[0].cards);
-      console.log('Existing cards:', JSON.stringify(existingCards, null, 2));
-      
-      const updatedCards = cards.map((newCard, index) => {
-        const existingCard = existingCards[index] || {};
-        return {
-          ...existingCard,
-          ...newCard,
-          // Mantieni i campi vuoti se non sono stati modificati
-          TR: newCard.TR || existingCard.TR || '',
-          ID: newCard.ID || existingCard.ID || '',
-          N: newCard.N || existingCard.N || '',
-          Note: newCard.Note || existingCard.Note || '',
-          status: newCard.status || existingCard.status || 'default',
-          startTime: newCard.startTime || existingCard.startTime || null,
-          endTime: newCard.endTime || existingCard.endTime || null
-        };
-      });
+      try {
+        // Se la cella esiste, aggiorna mantenendo i dati esistenti
+        const existingCell = await pool.query(
+          'SELECT cards FROM cells WHERE cell_number = $1',
+          [cell_number]
+        );
+        
+        const existingCards = JSON.parse(existingCell.rows[0].cards);
+        console.log('Existing cards:', JSON.stringify(existingCards, null, 2));
+        
+        const updatedCards = cards.map((newCard, index) => {
+          const existingCard = existingCards[index] || {};
+          return {
+            ...existingCard,
+            ...newCard,
+            // Mantieni i campi vuoti se non sono stati modificati
+            TR: newCard.TR || existingCard.TR || '',
+            ID: newCard.ID || existingCard.ID || '',
+            N: newCard.N || existingCard.N || '',
+            Note: newCard.Note || existingCard.Note || '',
+            status: newCard.status || existingCard.status || 'default',
+            startTime: newCard.startTime || existingCard.startTime || null,
+            endTime: newCard.endTime || existingCard.endTime || null
+          };
+        });
 
-      console.log('Updated cards:', JSON.stringify(updatedCards, null, 2));
+        console.log('Updated cards:', JSON.stringify(updatedCards, null, 2));
 
-      await pool.query(
-        'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
-        [JSON.stringify(updatedCards), cell_number]
-      );
-      console.log('Cella aggiornata con successo:', cell_number);
+        await pool.query(
+          'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
+          [JSON.stringify(updatedCards), cell_number]
+        );
+        console.log('Cella aggiornata con successo:', cell_number);
+      } catch (error) {
+        console.error('Errore durante l\'aggiornamento della cella:', error);
+        throw new Error(`Errore durante l'aggiornamento della cella: ${error.message}`);
+      }
     }
 
     res.json({ message: 'Cella salvata con successo' });
@@ -301,7 +330,11 @@ app.post('/api/cells', async (req, res) => {
       message: error.message,
       stack: error.stack
     });
-    res.status(500).json({ error: 'Errore del server', details: error.message });
+    res.status(500).json({ 
+      error: 'Errore del server', 
+      details: error.message,
+      type: error.name
+    });
   }
 });
 
