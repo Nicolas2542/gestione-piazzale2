@@ -576,6 +576,11 @@ function App() {
         setCells(updatedCells);
       }
 
+      // Determina il nuovo stato della card
+      const newStatus = status ? 'yellow' : 'red';
+      const startTime = newStatus === 'yellow' ? new Date().toISOString() : null;
+      const endTime = newStatus === 'green' ? new Date().toISOString() : null;
+
       // Procedi con il salvataggio delle modifiche
       const response = await fetch(`${API_URL}/api/preposto-changes`, {
         method: 'POST',
@@ -585,9 +590,9 @@ function App() {
         body: JSON.stringify({
           cellIndex,
           cardIndex,
-          status,
-          startTime: status === 'yellow' ? new Date().toISOString() : null,
-          endTime: status === 'green' ? new Date().toISOString() : null
+          status: newStatus,
+          startTime,
+          endTime
         }),
       });
 
@@ -600,9 +605,9 @@ function App() {
       const newCells = [...cells];
       newCells[cellIndex].cards[cardIndex] = {
         ...newCells[cellIndex].cards[cardIndex],
-        status,
-        startTime: status === 'yellow' ? new Date().toISOString() : null,
-        endTime: status === 'green' ? new Date().toISOString() : null
+        status: newStatus,
+        startTime,
+        endTime
       };
       setCells(newCells);
 
