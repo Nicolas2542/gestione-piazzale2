@@ -551,7 +551,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cellIndex,
+          cell_number: cellName,
           cardIndex,
           status: newCells[cellIndex].cards[cardIndex].status,
           startTime: newCells[cellIndex].cards[cardIndex].startTime,
@@ -560,14 +560,29 @@ function App() {
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || error.error || 'Errore del server');
+        let errorMessage;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.details || errorData.error || 'Errore del server';
+        } catch (e) {
+          errorMessage = `Errore del server (${response.status})`;
+        }
+        throw new Error(errorMessage);
+      }
+
+      // Verifica che la risposta sia un JSON valido
+      let result;
+      try {
+        result = await response.json();
+      } catch (e) {
+        console.error('Error parsing server response:', e);
+        throw new Error('Risposta del server non valida');
       }
 
       showNotification('Modifiche salvate con successo', 'success');
     } catch (error) {
       console.error('Error saving preposto changes:', error);
-      showNotification('Errore nel salvataggio delle modifiche', 'error');
+      showNotification(error.message || 'Errore nel salvataggio delle modifiche', 'error');
       // Ripristina lo stato precedente in caso di errore
       setCells(cells);
     }
