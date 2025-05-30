@@ -545,6 +545,20 @@ function App() {
         cellName = `Preparazione ${cellIndex - 13}`;
       }
 
+      console.log('Saving preposto changes for:', {
+        cellName,
+        cellIndex,
+        cardIndex,
+        status: newCells[cellIndex].cards[cardIndex].status
+      });
+
+      // Prima verifica che la cella esista
+      const checkResponse = await fetch(`${API_URL}/api/cells/${cellName}`);
+      if (!checkResponse.ok) {
+        throw new Error(`Cella ${cellName} non trovata`);
+      }
+
+      // Se la cella esiste, procedi con l'aggiornamento
       const response = await fetch(`${API_URL}/api/preposto-changes`, {
         method: 'POST',
         headers: {
