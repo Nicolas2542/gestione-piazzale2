@@ -95,11 +95,11 @@ function App() {
               if (num >= 4 && num <= 13) {
                 cellIndex = num - 4;  // Buca 4 -> index 0, Buca 13 -> index 9
               } else if (num >= 30 && num <= 33) {
-                cellIndex = num - 16;  // Buca 30 -> index 10, Buca 33 -> index 13
+                cellIndex = num - 20;  // Buca 30 -> index 10, Buca 33 -> index 13
               }
             } else if (cellNumber.startsWith('Preparazione')) {
               const num = parseInt(cellNumber.split(' ')[1]);
-              cellIndex = num + 13;  // Preparazione 1 -> index 14
+              cellIndex = num + 13;  // Preparazione 1 -> index 14, Preparazione 3 -> index 16
             }
 
             if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < updatedCells.length) {
@@ -324,7 +324,7 @@ function App() {
           if (num >= 4 && num <= 13) {
             cellIndex = num - 4;
           } else if (num >= 30 && num <= 33) {
-            cellIndex = num - 16;
+            cellIndex = num - 20;
           }
         } else if (cellNumber.startsWith('Preparazione')) {
           const num = parseInt(cellNumber.split(' ')[1]);
@@ -474,7 +474,7 @@ function App() {
           if (num >= 4 && num <= 13) {
             cellIndex = num - 4;
           } else if (num >= 30 && num <= 33) {
-            cellIndex = num - 16;
+            cellIndex = num - 20;
           }
         } else if (cellNumber.startsWith('Preparazione')) {
           const num = parseInt(cellNumber.split(' ')[1]);
@@ -511,7 +511,7 @@ function App() {
       if (cellIndex < 10) {
         cellNumber = `Buca ${cellIndex + 4}`;
       } else if (cellIndex < 14) {
-        cellNumber = `Buca ${cellIndex + 16}`;
+        cellNumber = `Buca ${cellIndex + 20}`;  // Corretto per le buche 30-33
       } else {
         cellNumber = `Preparazione ${cellIndex - 13}`;
       }
@@ -558,7 +558,7 @@ function App() {
             if (num >= 4 && num <= 13) {
               cellIndex = num - 4;
             } else if (num >= 30 && num <= 33) {
-              cellIndex = num - 16;
+              cellIndex = num - 20;  // Corretto per le buche 30-33
             }
           } else if (cellNumber.startsWith('Preparazione')) {
             const num = parseInt(cellNumber.split(' ')[1]);
@@ -588,7 +588,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cellIndex,
+          cellNumber,  // Invia il nome della cella invece dell'indice
           cardIndex,
           status: newStatus,
           startTime,
