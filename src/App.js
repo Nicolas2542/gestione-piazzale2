@@ -502,103 +502,114 @@ function App() {
     }
   };
 
-  const handlePrepostoConfirmation = async (cellIndex, cardIndex, confirmed) => {
-    if (cellIndex === null || cardIndex === null || !cells[cellIndex] || !cells[cellIndex].cards[cardIndex]) {
-      console.error('Invalid cell or card index');
-      return;
-    }
-
-    // Crea una copia profonda delle celle per evitare mutazioni indesiderate
-    const newCells = JSON.parse(JSON.stringify(cells));
-    const currentStatus = newCells[cellIndex].cards[cardIndex].status;
-
-    if (currentStatus === 'default') {
-      if (confirmed) {
-        // First confirmation - turn yellow and set start time
-        newCells[cellIndex].cards[cardIndex].status = 'yellow';
-        newCells[cellIndex].cards[cardIndex].startTime = new Date().toISOString();
-      } else {
-        // User clicked No on first confirmation
-        newCells[cellIndex].cards[cardIndex].status = 'red';
-      }
-    } else if (currentStatus === 'yellow') {
-      if (confirmed) {
-        // Second confirmation - turn green and set end time
-        newCells[cellIndex].cards[cardIndex].status = 'green';
-        newCells[cellIndex].cards[cardIndex].endTime = new Date().toISOString();
-      }
-    }
-
-    // Aggiorna lo stato locale
-    setCells(newCells);
-    setConfirmationDialog({ open: false, cellIndex: null, cardIndex: null, step: 1 });
-
-    // Salva le modifiche sul server
+  const handlePrepostoConfirmation = async (cellIndex, cardIndex, status) => {
     try {
+      console.log('Saving preposto changes for:', { cellIndex, cardIndex, status });
+      
       // Determina il nome della cella in base all'indice
-      let cellName;
+      let cellNumber;
       if (cellIndex < 10) {
-        cellName = `Buca ${cellIndex + 4}`;
+        cellNumber = `Buca ${cellIndex + 4}`;
       } else if (cellIndex < 14) {
-        cellName = `Buca ${cellIndex + 16}`;
+        cellNumber = `Buca ${cellIndex + 16}`;
       } else {
-        cellName = `Preparazione ${cellIndex - 13}`;
+        cellNumber = `Preparazione ${cellIndex - 13}`;
       }
 
-      console.log('Saving preposto changes for:', {
-        cellName,
-        cellIndex,
-        cardIndex,
-        status: newCells[cellIndex].cards[cardIndex].status
-      });
-
-      // Prima verifica che la cella esista
-      const checkResponse = await fetch(`${API_URL}/api/cells/${cellName}`);
+      // Verifica se la cella esiste
+      const checkResponse = await fetch(`${API_URL}/api/cells/${cellNumber}`);
       if (!checkResponse.ok) {
-        throw new Error(`Cella ${cellName} non trovata`);
+        // Se la cella non esiste, popola tutte le celle mancanti
+        console.log('Cella non trovata, popolamento celle mancanti...');
+        const populateResponse = await fetch(`${API_URL}/api/populate-cells`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        if (!populateResponse.ok) {
+          throw new Error('Errore durante il popolamento delle celle');
+        }
+
+        const populateResult = await populateResponse.json();
+        console.log('Risultato popolamento celle:', populateResult);
+
+        // Ricarica i dati dopo il popolamento
+        const reloadResponse = await fetch(`${API_URL}/api/cells`);
+        if (!reloadResponse.ok) {
+          throw new Error('Errore nel ricaricamento dei dati');
+        }
+        const reloadData = await reloadResponse.json();
+        
+        // Aggiorna lo stato locale con i dati aggiornati
+        const updatedCells = [...cells];
+        reloadData.forEach(item => {
+          let cellIndex;
+          const cellNumber = item.cell_number;
+          
+          if (cellNumber.startsWith('Buca')) {
+            const num = parseInt(cellNumber.split(' ')[1]);
+            if (num >= 4 && num <= 13) {
+              cellIndex = num - 4;
+            } else if (num >= 30 && num <= 33) {
+              cellIndex = num - 16;
+            }
+          } else if (cellNumber.startsWith('Preparazione')) {
+            const num = parseInt(cellNumber.split(' ')[1]);
+            cellIndex = num + 13;
+          }
+
+          if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < updatedCells.length) {
+            updatedCells[cellIndex].cards = item.cards.map(card => ({
+              status: card.status || 'default',
+              startTime: card.startTime || null,
+              endTime: card.endTime || null,
+              TR: card.TR || '',
+              ID: card.ID || '',
+              N: card.N || '',
+              Note: card.Note || ''
+            }));
+          }
+        });
+        
+        setCells(updatedCells);
       }
 
-      // Se la cella esiste, procedi con l'aggiornamento
+      // Procedi con il salvataggio delle modifiche
       const response = await fetch(`${API_URL}/api/preposto-changes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cell_number: cellName,
+          cellIndex,
           cardIndex,
-          status: newCells[cellIndex].cards[cardIndex].status,
-          startTime: newCells[cellIndex].cards[cardIndex].startTime,
-          endTime: newCells[cellIndex].cards[cardIndex].endTime
+          status,
+          startTime: status === 'yellow' ? new Date().toISOString() : null,
+          endTime: status === 'green' ? new Date().toISOString() : null
         }),
       });
 
       if (!response.ok) {
-        let errorMessage;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.details || errorData.error || 'Errore del server';
-        } catch (e) {
-          errorMessage = `Errore del server (${response.status})`;
-        }
-        throw new Error(errorMessage);
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Errore nel salvataggio delle modifiche');
       }
 
-      // Verifica che la risposta sia un JSON valido
-      let result;
-      try {
-        result = await response.json();
-      } catch (e) {
-        console.error('Error parsing server response:', e);
-        throw new Error('Risposta del server non valida');
-      }
+      // Aggiorna lo stato locale
+      const newCells = [...cells];
+      newCells[cellIndex].cards[cardIndex] = {
+        ...newCells[cellIndex].cards[cardIndex],
+        status,
+        startTime: status === 'yellow' ? new Date().toISOString() : null,
+        endTime: status === 'green' ? new Date().toISOString() : null
+      };
+      setCells(newCells);
 
       showNotification('Modifiche salvate con successo', 'success');
     } catch (error) {
       console.error('Error saving preposto changes:', error);
       showNotification(error.message || 'Errore nel salvataggio delle modifiche', 'error');
-      // Ripristina lo stato precedente in caso di errore
-      setCells(cells);
     }
   };
 
