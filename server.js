@@ -330,10 +330,13 @@ app.post('/api/cells', async (req, res) => {
 
 // Preposto changes endpoint
 app.post('/api/preposto-changes', async (req, res) => {
+  let client;
   try {
     const { cellIndex, cardIndex, status, startTime, endTime } = req.body;
     console.log('=== DEBUG PREPOSTO CHANGES ===');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
+
+    client = await pool.connect();
 
     // Converti l'indice della cella nel numero della cella
     let cellNumber;
@@ -348,18 +351,35 @@ app.post('/api/preposto-changes', async (req, res) => {
     console.log('Cell number:', cellNumber);
 
     // Recupera la cella esistente
-    const existingCell = await pool.query(
+    const existingCell = await client.query(
       'SELECT cards FROM cells WHERE cell_number = $1',
       [cellNumber]
     );
 
+    let existingCards;
     if (existingCell.rows.length === 0) {
-      console.error('Cella non trovata:', cellNumber);
-      return res.status(404).json({ error: 'Cella non trovata' });
+      console.log('Cella non trovata, creazione in corso:', cellNumber);
+      // Se la cella non esiste, creala con le card di default
+      existingCards = Array(4).fill(null).map(() => ({
+        status: 'default',
+        startTime: null,
+        endTime: null,
+        TR: '',
+        ID: '',
+        N: '',
+        Note: ''
+      }));
+
+      await client.query(
+        'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+        [cellNumber, JSON.stringify(existingCards)]
+      );
+      console.log('Nuova cella creata:', cellNumber);
+    } else {
+      existingCards = JSON.parse(existingCell.rows[0].cards);
     }
 
     // Aggiorna solo i campi specifici della card
-    const existingCards = JSON.parse(existingCell.rows[0].cards);
     existingCards[cardIndex] = {
       ...existingCards[cardIndex],
       status,
@@ -368,7 +388,7 @@ app.post('/api/preposto-changes', async (req, res) => {
     };
 
     // Salva le modifiche
-    await pool.query(
+    await client.query(
       'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
       [JSON.stringify(existingCards), cellNumber]
     );
@@ -388,6 +408,10 @@ app.post('/api/preposto-changes', async (req, res) => {
       details: error.message,
       type: error.name
     });
+  } finally {
+    if (client) {
+      client.release();
+    }
   }
 });
 
