@@ -530,7 +530,8 @@ function App() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-          }
+          },
+          body: JSON.stringify({ cellNumber })  // Invia il nome della cella
         });
 
         if (!populateResponse.ok) {
