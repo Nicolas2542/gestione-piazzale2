@@ -376,7 +376,38 @@ app.post('/api/preposto-changes', async (req, res) => {
       );
       console.log('Nuova cella creata:', cellNumber);
     } else {
-      existingCards = JSON.parse(existingCell.rows[0].cards);
+      try {
+        // Verifica se cards è già un oggetto
+        existingCards = typeof existingCell.rows[0].cards === 'object' 
+          ? existingCell.rows[0].cards 
+          : JSON.parse(existingCell.rows[0].cards);
+        
+        // Verifica che existingCards sia un array
+        if (!Array.isArray(existingCards)) {
+          console.error('Cards non è un array:', existingCards);
+          existingCards = Array(4).fill(null).map(() => ({
+            status: 'default',
+            startTime: null,
+            endTime: null,
+            TR: '',
+            ID: '',
+            N: '',
+            Note: ''
+          }));
+        }
+      } catch (error) {
+        console.error('Errore nel parsing delle cards:', error);
+        console.error('Cards ricevute:', existingCell.rows[0].cards);
+        existingCards = Array(4).fill(null).map(() => ({
+          status: 'default',
+          startTime: null,
+          endTime: null,
+          TR: '',
+          ID: '',
+          N: '',
+          Note: ''
+        }));
+      }
     }
 
     // Verifica che l'indice della card sia valido
