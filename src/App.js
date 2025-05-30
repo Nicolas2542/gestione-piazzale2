@@ -402,7 +402,7 @@ function App() {
     }
   };
 
-  const handleResetColors = () => {
+  const handleResetColors = async () => {
     if (user !== 'admin') return;
     const newCells = [...cells];
     newCells.forEach(cell => {
@@ -413,13 +413,17 @@ function App() {
     });
     setCells(newCells);
     setResetColorsDialog({ open: false });
-    showNotification('Colori resettati con successo', 'success');
     
-    // Try to save the reset state to the server
-    saveCellData(0).catch(error => {
+    // Save all cells after reset
+    try {
+      for (let i = 0; i < newCells.length; i++) {
+        await saveCellData(i);
+      }
+      showNotification('Colori resettati con successo', 'success');
+    } catch (error) {
       console.error('Error saving reset state:', error);
-      showNotification('I colori sono stati resettati localmente, ma non è stato possibile salvare lo stato sul server.', 'warning');
-    });
+      showNotification('Errore nel salvataggio dello stato reset sul server', 'error');
+    }
   };
 
   const handlePrepostoConfirmation = async (cellIndex, cardIndex, confirmed) => {
@@ -465,22 +469,17 @@ function App() {
         cellName = `Preparazione ${cellIndex - 13}`;
       }
 
-      console.log('=== DEBUG PREPOSTO SAVE ===');
-      console.log('Cell Index:', cellIndex);
-      console.log('Cell Name:', cellName);
-      console.log('Card Index:', cardIndex);
-      console.log('New Status:', newCells[cellIndex].cards[cardIndex].status);
-      console.log('Start Time:', newCells[cellIndex].cards[cardIndex].startTime);
-      console.log('End Time:', newCells[cellIndex].cards[cardIndex].endTime);
-
-      const response = await fetch(`${API_URL}/api/cells`, {
+      const response = await fetch(`${API_URL}/api/preposto-changes`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cell_number: cellName,
-          cards: newCells[cellIndex].cards
+          cellIndex,
+          cardIndex,
+          status: newCells[cellIndex].cards[cardIndex].status,
+          startTime: newCells[cellIndex].cards[cardIndex].startTime,
+          endTime: newCells[cellIndex].cards[cardIndex].endTime
         }),
       });
 
@@ -493,6 +492,8 @@ function App() {
     } catch (error) {
       console.error('Error saving preposto changes:', error);
       showNotification('Errore nel salvataggio delle modifiche', 'error');
+      // Ripristina lo stato precedente in caso di errore
+      setCells(cells);
     }
   };
 
