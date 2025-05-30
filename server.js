@@ -391,6 +391,70 @@ app.post('/api/preposto-changes', async (req, res) => {
   }
 });
 
+// Endpoint per popolare le celle mancanti
+app.post('/api/populate-cells', async (req, res) => {
+  let client;
+  try {
+    console.log('=== POPOLAMENTO CELLE MANCANTI ===');
+    client = await pool.connect();
+    
+    // Verifica quali celle esistono già
+    const existingCells = await client.query('SELECT cell_number FROM cells');
+    const existingCellNumbers = new Set(existingCells.rows.map(row => row.cell_number));
+    
+    // Definisci tutte le celle che dovrebbero esistere
+    const requiredCells = [];
+    // Buche da 4 a 13
+    for (let i = 4; i <= 13; i++) {
+      requiredCells.push(`Buca ${i}`);
+    }
+    // Buche da 30 a 33
+    for (let i = 30; i <= 33; i++) {
+      requiredCells.push(`Buca ${i}`);
+    }
+    // Preparazione 1-3
+    for (let i = 1; i <= 3; i++) {
+      requiredCells.push(`Preparazione ${i}`);
+    }
+    
+    // Prepara i dati per le nuove celle
+    const defaultCards = JSON.stringify([
+      { status: 'default', startTime: null, endTime: null, TR: '', ID: '', N: '', Note: '' },
+      { status: 'default', startTime: null, endTime: null, TR: '', ID: '', N: '', Note: '' },
+      { status: 'default', startTime: null, endTime: null, TR: '', ID: '', N: '', Note: '' },
+      { status: 'default', startTime: null, endTime: null, TR: '', ID: '', N: '', Note: '' }
+    ]);
+    
+    // Inserisci solo le celle mancanti
+    let insertedCount = 0;
+    for (const cellNumber of requiredCells) {
+      if (!existingCellNumbers.has(cellNumber)) {
+        await client.query(
+          'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+          [cellNumber, defaultCards]
+        );
+        insertedCount++;
+        console.log('Inserita nuova cella:', cellNumber);
+      }
+    }
+    
+    res.json({ 
+      message: 'Operazione completata con successo',
+      insertedCells: insertedCount
+    });
+  } catch (error) {
+    console.error('Errore durante il popolamento delle celle:', error);
+    res.status(500).json({ 
+      error: 'Errore del server',
+      details: error.message
+    });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+});
+
 // Initialize database on startup
 initializeDatabase().catch(error => {
   console.error('Errore fatale durante l\'inizializzazione del database:', error);
