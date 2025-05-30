@@ -379,6 +379,11 @@ app.post('/api/preposto-changes', async (req, res) => {
       existingCards = JSON.parse(existingCell.rows[0].cards);
     }
 
+    // Verifica che l'indice della card sia valido
+    if (cardIndex < 0 || cardIndex >= existingCards.length) {
+      throw new Error(`Indice card non valido: ${cardIndex}`);
+    }
+
     // Aggiorna solo i campi specifici della card
     existingCards[cardIndex] = {
       ...existingCards[cardIndex],
