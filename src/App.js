@@ -611,6 +611,9 @@ function App() {
       };
       setCells(newCells);
 
+      // Chiudi il dialog di conferma
+      setConfirmationDialog({ open: false, cellIndex: null, cardIndex: null, step: 1 });
+
       showNotification('Modifiche salvate con successo', 'success');
     } catch (error) {
       console.error('Error saving preposto changes:', error);
@@ -873,12 +876,6 @@ function App() {
                           fullWidth
                           onClick={() => {
                             const currentStatus = cells[index].cards[cardIndex].status;
-                            if (currentStatus === 'red') {
-                              // Reset red card to default status
-                              const newCells = [...cells];
-                              newCells[index].cards[cardIndex].status = 'default';
-                              setCells(newCells);
-                            }
                             setConfirmationDialog({ 
                               open: true, 
                               cellIndex: index, 
@@ -1064,12 +1061,6 @@ function App() {
                               fullWidth
                               onClick={() => {
                                 const currentStatus = cells[actualIndex].cards[cardIndex].status;
-                                if (currentStatus === 'red') {
-                                  // Reset red card to default status
-                                  const newCells = [...cells];
-                                  newCells[actualIndex].cards[cardIndex].status = 'default';
-                                  setCells(newCells);
-                                }
                                 setConfirmationDialog({ 
                                   open: true, 
                                   cellIndex: actualIndex, 
