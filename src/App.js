@@ -516,6 +516,11 @@ function App() {
         cellNumber = `Preparazione ${cellIndex - 13}`;
       }
 
+      // Determina il nuovo stato della card
+      const newStatus = status ? 'yellow' : 'red';
+      const startTime = newStatus === 'yellow' ? new Date().toISOString() : null;
+      const endTime = newStatus === 'green' ? new Date().toISOString() : null;
+
       // Verifica se la cella esiste
       const checkResponse = await fetch(`${API_URL}/api/cells/${cellNumber}`);
       if (!checkResponse.ok) {
@@ -575,11 +580,6 @@ function App() {
         
         setCells(updatedCells);
       }
-
-      // Determina il nuovo stato della card
-      const newStatus = status ? 'yellow' : 'red';
-      const startTime = newStatus === 'yellow' ? new Date().toISOString() : null;
-      const endTime = newStatus === 'green' ? new Date().toISOString() : null;
 
       // Procedi con il salvataggio delle modifiche
       const response = await fetch(`${API_URL}/api/preposto-changes`, {
