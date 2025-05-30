@@ -404,25 +404,101 @@ function App() {
 
   const handleResetColors = async () => {
     if (user !== 'admin') return;
-    const newCells = [...cells];
-    newCells.forEach(cell => {
-      cell.cards = cell.cards.map(card => ({
-        ...card,  // Mantiene tutti i dati esistenti
-        status: 'default'  // Resetta solo lo stato
-      }));
-    });
-    setCells(newCells);
-    setResetColorsDialog({ open: false });
     
-    // Save all cells after reset
     try {
+      // Prima resetta tutte le celle localmente
+      const newCells = [...cells];
+      newCells.forEach(cell => {
+        cell.cards = cell.cards.map(card => ({
+          ...card,  // Mantiene tutti i dati esistenti
+          status: 'default',  // Resetta solo lo stato
+          startTime: null,    // Resetta i timestamp
+          endTime: null
+        }));
+      });
+      setCells(newCells);
+      setResetColorsDialog({ open: false });
+
+      // Poi salva tutte le celle sul server in sequenza
       for (let i = 0; i < newCells.length; i++) {
-        await saveCellData(i);
+        let cellName;
+        if (i < 10) {
+          cellName = `Buca ${i + 4}`;
+        } else if (i < 14) {
+          cellName = `Buca ${i + 16}`;
+        } else {
+          cellName = `Preparazione ${i - 13}`;
+        }
+
+        const cellData = {
+          cell_number: cellName,
+          cards: newCells[i].cards.map(card => ({
+            status: 'default',
+            startTime: null,
+            endTime: null,
+            TR: card.TR || '',
+            ID: card.ID || '',
+            N: card.N || '',
+            Note: card.Note || ''
+          }))
+        };
+
+        const response = await fetch(`${API_URL}/api/cells`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(cellData),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Errore nel salvataggio della cella ${cellName}`);
+        }
       }
+
+      // Ricarica i dati dal server per assicurarsi che tutto sia sincronizzato
+      const updatedResponse = await fetch(`${API_URL}/api/cells`);
+      if (!updatedResponse.ok) {
+        throw new Error('Errore nel caricamento dei dati aggiornati');
+      }
+      const updatedData = await updatedResponse.json();
+      
+      // Aggiorna lo stato locale con i dati aggiornati
+      const updatedCells = [...cells];
+      updatedData.forEach(item => {
+        let cellIndex;
+        const cellNumber = item.cell_number;
+        
+        if (cellNumber.startsWith('Buca')) {
+          const num = parseInt(cellNumber.split(' ')[1]);
+          if (num >= 4 && num <= 13) {
+            cellIndex = num - 4;
+          } else if (num >= 30 && num <= 33) {
+            cellIndex = num - 16;
+          }
+        } else if (cellNumber.startsWith('Preparazione')) {
+          const num = parseInt(cellNumber.split(' ')[1]);
+          cellIndex = num + 13;
+        }
+
+        if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < updatedCells.length) {
+          updatedCells[cellIndex].cards = item.cards.map(card => ({
+            status: card.status || 'default',
+            startTime: card.startTime || null,
+            endTime: card.endTime || null,
+            TR: card.TR || '',
+            ID: card.ID || '',
+            N: card.N || '',
+            Note: card.Note || ''
+          }));
+        }
+      });
+      
+      setCells(updatedCells);
       showNotification('Colori resettati con successo', 'success');
     } catch (error) {
-      console.error('Error saving reset state:', error);
-      showNotification('Errore nel salvataggio dello stato reset sul server', 'error');
+      console.error('Error resetting colors:', error);
+      showNotification('Errore nel reset dei colori', 'error');
     }
   };
 
