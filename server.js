@@ -17,11 +17,12 @@ app.use(express.json());
 
 // Configurazione del database
 console.log('=== CONFIGURAZIONE DATABASE ===');
-console.log('DATABASE_URL presente:', !!process.env.DATABASE_URL);
-console.log('DATABASE_URL:', process.env.DATABASE_URL ? process.env.DATABASE_URL.replace(/:[^:@]*@/, ':****@') : 'non presente');
+const DATABASE_URL = 'postgresql://postgres:kRhTsfkIKAxinxiuzrSbAchalCsoXeAV@interchange.proxy.rlwy.net:29869/railway';
+console.log('DATABASE_URL presente:', !!DATABASE_URL);
+console.log('DATABASE_URL:', DATABASE_URL.replace(/:[^:@]*@/, ':****@'));
 
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: DATABASE_URL,
   ssl: {
     rejectUnauthorized: false
   }
