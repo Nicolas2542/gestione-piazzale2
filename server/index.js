@@ -46,6 +46,14 @@ pool.query(`
   )
 `).catch(err => console.error('Error creating monitoring_logs table:', err));
 
+// Crea la tabella per le celle se non esiste
+pool.query(`
+  CREATE TABLE IF NOT EXISTS cells (
+    cell_number VARCHAR(50) PRIMARY KEY,
+    cards JSONB NOT NULL
+  )
+`).catch(err => console.error('Error creating cells table:', err));
+
 // Endpoint per il login
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
@@ -113,10 +121,14 @@ app.post('/api/cells', async (req, res) => {
 });
 
 // Endpoint per registrare un evento di monitoraggio
-app.post('/api/monitoring-logs', async (req, res) => {
+app.post('/api/monitoring-logs', authenticateToken, async (req, res) => {
   try {
     const { cellNumber, cardIndex, eventType, cardData } = req.body;
     
+    if (!cellNumber || cardIndex === undefined || !eventType) {
+      return res.status(400).json({ error: 'Parametri mancanti' });
+    }
+
     const result = await pool.query(
       'INSERT INTO monitoring_logs (cell_number, card_index, event_type, card_data) VALUES ($1, $2, $3, $4) RETURNING *',
       [cellNumber, cardIndex, eventType, JSON.stringify(cardData)]
@@ -130,7 +142,7 @@ app.post('/api/monitoring-logs', async (req, res) => {
 });
 
 // Endpoint per ottenere i log di monitoraggio
-app.get('/api/monitoring-logs', async (req, res) => {
+app.get('/api/monitoring-logs', authenticateToken, async (req, res) => {
   try {
     const result = await pool.query(
       'SELECT * FROM monitoring_logs ORDER BY timestamp DESC'
@@ -158,10 +170,14 @@ app.post('/api/reset-monitoring', authenticateToken, async (req, res) => {
 });
 
 // Endpoint per popolare le celle mancanti
-app.post('/api/populate-cells', async (req, res) => {
+app.post('/api/populate-cells', authenticateToken, async (req, res) => {
   try {
     const { cellNumber } = req.body;
     
+    if (!cellNumber) {
+      return res.status(400).json({ error: 'Nome cella mancante' });
+    }
+
     // Verifica se la cella esiste già
     const existingCell = await pool.query('SELECT * FROM cells WHERE cell_number = $1', [cellNumber]);
     
@@ -193,22 +209,35 @@ app.post('/api/populate-cells', async (req, res) => {
 });
 
 // Endpoint per i cambiamenti del preposto
-app.post('/api/preposto-changes', async (req, res) => {
+app.post('/api/preposto-changes', authenticateToken, async (req, res) => {
   try {
     const { cellNumber, cardIndex, status, startTime, endTime } = req.body;
     
-    const result = await pool.query(
-      'UPDATE cells SET cards = jsonb_set(cards, $1, $2) WHERE cell_number = $3 RETURNING *',
-      [
-        `{${cardIndex},status}`,
-        JSON.stringify(status),
-        cellNumber
-      ]
-    );
+    if (!cellNumber || cardIndex === undefined || !status) {
+      return res.status(400).json({ error: 'Parametri mancanti' });
+    }
 
-    if (result.rows.length === 0) {
+    // Prima ottieni la cella corrente
+    const currentCell = await pool.query('SELECT * FROM cells WHERE cell_number = $1', [cellNumber]);
+    
+    if (currentCell.rows.length === 0) {
       return res.status(404).json({ error: 'Cella non trovata' });
     }
+
+    // Aggiorna la card specifica
+    const cards = currentCell.rows[0].cards;
+    cards[cardIndex] = {
+      ...cards[cardIndex],
+      status,
+      startTime,
+      endTime
+    };
+
+    // Salva la cella aggiornata
+    const result = await pool.query(
+      'UPDATE cells SET cards = $1 WHERE cell_number = $2 RETURNING *',
+      [JSON.stringify(cards), cellNumber]
+    );
 
     res.json(result.rows[0]);
   } catch (error) {
