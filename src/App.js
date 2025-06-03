@@ -558,6 +558,30 @@ function App() {
       };
       setCells(newCells);
 
+      // Registra l'evento nel log di monitoraggio
+      if (newStatus === 'yellow' || newStatus === 'green') {
+        try {
+          const logResponse = await fetch(`${API_URL}/api/monitoring-logs`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              cellNumber,
+              cardIndex: cardIndex + 1,
+              eventType: newStatus,
+              cardData: newCells[cellIndex].cards[cardIndex]
+            }),
+          });
+
+          if (!logResponse.ok) {
+            console.error('Error logging monitoring event:', await logResponse.json());
+          }
+        } catch (error) {
+          console.error('Error logging monitoring event:', error);
+        }
+      }
+
       // Verifica se la cella esiste
       console.log('Verifica esistenza cella:', cellNumber);
       const checkResponse = await fetch(`${API_URL}/api/cells/${cellNumber}`);

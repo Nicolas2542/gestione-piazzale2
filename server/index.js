@@ -13,27 +13,54 @@ app.post('/api/reset-monitoring', async (req, res) => {
       return res.status(403).json({ error: 'Solo gli admin possono resettare i dati di monitoraggio' });
     }
 
-    // Recupera tutte le celle
-    const cells = await db.query('SELECT * FROM cells');
+    // Cancella tutti i log di monitoraggio
+    await db.query('DELETE FROM monitoring_logs');
     
-    // Per ogni cella, resetta solo i dati di monitoraggio
-    for (const cell of cells) {
-      const cards = JSON.parse(cell.cards);
-      const updatedCards = cards.map(card => ({
-        ...card,
-        startTime: null,
-        endTime: null
-      }));
-
-      await db.query(
-        'UPDATE cells SET cards = $1 WHERE cell_number = $2',
-        [JSON.stringify(updatedCards), cell.cell_number]
-      );
-    }
-
-    res.json({ message: 'Dati di monitoraggio resettati con successo' });
+    res.json({ message: 'Log di monitoraggio resettati con successo' });
   } catch (error) {
-    console.error('Error resetting monitoring data:', error);
-    res.status(500).json({ error: 'Errore nel reset dei dati di monitoraggio' });
+    console.error('Error resetting monitoring logs:', error);
+    res.status(500).json({ error: 'Errore nel reset dei log di monitoraggio' });
+  }
+}); 
+
+// Crea la tabella per i log di monitoraggio se non esiste
+db.query(`
+  CREATE TABLE IF NOT EXISTS monitoring_logs (
+    id SERIAL PRIMARY KEY,
+    cell_number VARCHAR(50) NOT NULL,
+    card_index INTEGER NOT NULL,
+    event_type VARCHAR(20) NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    card_data JSONB
+  )
+`).catch(err => console.error('Error creating monitoring_logs table:', err));
+
+// Endpoint per registrare un evento di monitoraggio
+app.post('/api/monitoring-logs', async (req, res) => {
+  try {
+    const { cellNumber, cardIndex, eventType, cardData } = req.body;
+    
+    await db.query(
+      'INSERT INTO monitoring_logs (cell_number, card_index, event_type, card_data) VALUES ($1, $2, $3, $4)',
+      [cellNumber, cardIndex, eventType, JSON.stringify(cardData)]
+    );
+
+    res.json({ message: 'Evento registrato con successo' });
+  } catch (error) {
+    console.error('Error recording monitoring event:', error);
+    res.status(500).json({ error: 'Errore nella registrazione dell\'evento' });
+  }
+});
+
+// Endpoint per ottenere i log di monitoraggio
+app.get('/api/monitoring-logs', async (req, res) => {
+  try {
+    const result = await db.query(
+      'SELECT * FROM monitoring_logs ORDER BY timestamp DESC'
+    );
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching monitoring logs:', error);
+    res.status(500).json({ error: 'Errore nel recupero dei log' });
   }
 }); 
