@@ -14,13 +14,18 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions
+  DialogActions,
+  Alert,
+  Snackbar
 } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import RefreshIcon from '@mui/icons-material/Refresh';
 
+const API_URL = 'https://web-production-b7884.up.railway.app';
+
 function Monitoring({ onBack, cells, user }) {
   const [resetDialog, setResetDialog] = useState({ open: false });
+  const [notification, setNotification] = useState({ open: false, message: '', severity: 'success' });
 
   const formatDuration = (seconds) => {
     const hours = Math.floor(seconds / 3600);
@@ -31,16 +36,32 @@ function Monitoring({ onBack, cells, user }) {
 
   const handleReset = async () => {
     try {
-      const response = await fetch('http://localhost:3001/api/reset-monitoring', {
-        method: 'POST'
+      const response = await fetch(`${API_URL}/api/reset-monitoring`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
       });
       
-      if (!response.ok) throw new Error('Errore nel reset dei dati');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Errore nel reset dei dati');
+      }
       
       setResetDialog({ open: false });
+      showNotification('Dati di monitoraggio resettati con successo', 'success');
     } catch (error) {
       console.error('Error resetting monitoring data:', error);
+      showNotification(error.message || 'Errore nel reset dei dati di monitoraggio', 'error');
     }
+  };
+
+  const showNotification = (message, severity) => {
+    setNotification({ open: true, message, severity });
+  };
+
+  const handleCloseNotification = () => {
+    setNotification({ ...notification, open: false });
   };
 
   return (
@@ -114,10 +135,10 @@ function Monitoring({ onBack, cells, user }) {
                     />
                   </TableCell>
                   <TableCell>
-                    {card.startTime ? new Date(card.startTime).toLocaleTimeString() : '-'}
+                    {card.startTime ? new Date(card.startTime).toLocaleString() : '-'}
                   </TableCell>
                   <TableCell>
-                    {card.endTime ? new Date(card.endTime).toLocaleTimeString() : '-'}
+                    {card.endTime ? new Date(card.endTime).toLocaleString() : '-'}
                   </TableCell>
                   <TableCell>
                     {card.startTime && (card.endTime || card.status === 'yellow') ? 
@@ -155,6 +176,18 @@ function Monitoring({ onBack, cells, user }) {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Notification Snackbar */}
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={handleCloseNotification} severity={notification.severity}>
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 }
