@@ -456,26 +456,12 @@ app.post('/api/populate-cells', async (req, res) => {
   let client;
   try {
     console.log('=== POPOLAMENTO CELLE MANCANTI ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
     client = await pool.connect();
     
     // Verifica quali celle esistono già
     const existingCells = await client.query('SELECT cell_number FROM cells');
     const existingCellNumbers = new Set(existingCells.rows.map(row => row.cell_number));
-    
-    // Definisci tutte le celle che dovrebbero esistere
-    const requiredCells = [];
-    // Buche da 4 a 13
-    for (let i = 4; i <= 13; i++) {
-      requiredCells.push(`Buca ${i}`);
-    }
-    // Buche da 30 a 33
-    for (let i = 30; i <= 33; i++) {
-      requiredCells.push(`Buca ${i}`);
-    }
-    // Preparazione 1-3
-    for (let i = 1; i <= 3; i++) {
-      requiredCells.push(`Preparazione ${i}`);
-    }
     
     // Prepara i dati per le nuove celle
     const defaultCards = JSON.stringify([
@@ -485,22 +471,73 @@ app.post('/api/populate-cells', async (req, res) => {
       { status: 'default', startTime: null, endTime: null, TR: '', ID: '', N: '', Note: '' }
     ]);
     
-    // Inserisci solo le celle mancanti
     let insertedCount = 0;
-    for (const cellNumber of requiredCells) {
-      if (!existingCellNumbers.has(cellNumber)) {
+    let errors = [];
+    
+    // Prima verifica se la cella richiesta esiste
+    const requestedCell = req.body.cellNumber;
+    if (requestedCell && !existingCellNumbers.has(requestedCell)) {
+      try {
         await client.query(
           'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
-          [cellNumber, defaultCards]
+          [requestedCell, defaultCards]
         );
         insertedCount++;
-        console.log('Inserita nuova cella:', cellNumber);
+        console.log('Inserita cella richiesta:', requestedCell);
+      } catch (error) {
+        console.error(`Errore durante l'inserimento della cella ${requestedCell}:`, error);
+        errors.push(`Errore durante l'inserimento della cella ${requestedCell}: ${error.message}`);
       }
     }
     
+    // Se la cella richiesta non è stata inserita, prova a inserire tutte le celle mancanti
+    if (insertedCount === 0) {
+      // Definisci tutte le celle che dovrebbero esistere
+      const requiredCells = [];
+      // Buche da 4 a 13
+      for (let i = 4; i <= 13; i++) {
+        requiredCells.push(`Buca ${i}`);
+      }
+      // Buche da 30 a 33
+      for (let i = 30; i <= 33; i++) {
+        requiredCells.push(`Buca ${i}`);
+      }
+      // Preparazione 1-3
+      for (let i = 1; i <= 3; i++) {
+        requiredCells.push(`Preparazione ${i}`);
+      }
+      
+      // Inserisci solo le celle mancanti
+      for (const cellNumber of requiredCells) {
+        if (!existingCellNumbers.has(cellNumber)) {
+          try {
+            await client.query(
+              'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+              [cellNumber, defaultCards]
+            );
+            insertedCount++;
+            console.log('Inserita nuova cella:', cellNumber);
+          } catch (error) {
+            console.error(`Errore durante l'inserimento della cella ${cellNumber}:`, error);
+            errors.push(`Errore durante l'inserimento della cella ${cellNumber}: ${error.message}`);
+          }
+        }
+      }
+    }
+    
+    // Verifica se la cella richiesta esiste dopo il popolamento
+    const finalCheck = await client.query(
+      'SELECT EXISTS(SELECT 1 FROM cells WHERE cell_number = $1)',
+      [requestedCell]
+    );
+    const cellExists = finalCheck.rows[0].exists;
+    
     res.json({ 
       message: 'Operazione completata con successo',
-      insertedCells: insertedCount
+      insertedCells: insertedCount,
+      requestedCell: requestedCell,
+      cellExists: cellExists,
+      errors: errors
     });
   } catch (error) {
     console.error('Errore durante il popolamento delle celle:', error);

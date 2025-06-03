@@ -569,7 +569,11 @@ function App() {
         const populateResult = await populateResponse.json();
         console.log('Risultato popolamento celle:', populateResult);
 
-        if (populateResult.insertedCells === 0 && !populateResult.cellExists) {
+        if (!populateResult.cellExists) {
+          // Se ci sono errori specifici, mostrali
+          if (populateResult.errors && populateResult.errors.length > 0) {
+            throw new Error(populateResult.errors.join('\n'));
+          }
           throw new Error(`Impossibile creare la cella ${cellNumber}`);
         }
       }
