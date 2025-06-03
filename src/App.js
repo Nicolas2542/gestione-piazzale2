@@ -142,21 +142,39 @@ function App() {
           // Aggiorna solo se non ci sono modifiche locali in corso
           setCells(prevCells => {
             const newCells = [...prevCells];
-            data.forEach((cell, cellIndex) => {
-              if (cellIndex < newCells.length) {
+            data.forEach(item => {
+              let cellIndex;
+              const cellNumber = item.cell_number;
+              
+              if (cellNumber.startsWith('Buca')) {
+                const num = parseInt(cellNumber.split(' ')[1]);
+                if (num >= 4 && num <= 13) {
+                  cellIndex = num - 4;
+                } else if (num >= 30 && num <= 33) {
+                  cellIndex = num - 20;
+                }
+              } else if (cellNumber.startsWith('Preparazione')) {
+                const num = parseInt(cellNumber.split(' ')[1]);
+                cellIndex = num + 13;
+              }
+
+              if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < newCells.length) {
                 // Mantieni i dati locali se sono stati modificati
-                cell.cards.forEach((card, cardIndex) => {
-                  if (cardIndex < newCells[cellIndex].cards.length) {
-                    const localCard = newCells[cellIndex].cards[cardIndex];
-                    // Aggiorna solo lo stato e i timestamp, mantieni i dati inseriti
-                    newCells[cellIndex].cards[cardIndex] = {
-                      ...localCard,
-                      status: card.status,
-                      startTime: card.startTime,
-                      endTime: card.endTime
-                    };
-                  }
-                });
+                const localCell = newCells[cellIndex];
+                const serverCards = item.cards.map(card => ({
+                  status: card.status || 'default',
+                  startTime: card.startTime || null,
+                  endTime: card.endTime || null,
+                  TR: card.TR || '',
+                  ID: card.ID || '',
+                  N: card.N || '',
+                  Note: card.Note || ''
+                }));
+
+                // Aggiorna solo se i dati del server sono diversi
+                if (JSON.stringify(localCell.cards) !== JSON.stringify(serverCards)) {
+                  newCells[cellIndex].cards = serverCards;
+                }
               }
             });
             return newCells;
@@ -521,6 +539,16 @@ function App() {
       const startTime = newStatus === 'yellow' ? new Date().toISOString() : null;
       const endTime = newStatus === 'green' ? new Date().toISOString() : null;
 
+      // Aggiorna prima lo stato locale
+      const newCells = [...cells];
+      newCells[cellIndex].cards[cardIndex] = {
+        ...newCells[cellIndex].cards[cardIndex],
+        status: newStatus,
+        startTime,
+        endTime
+      };
+      setCells(newCells);
+
       // Verifica se la cella esiste
       const checkResponse = await fetch(`${API_URL}/api/cells/${cellNumber}`);
       if (!checkResponse.ok) {
@@ -531,7 +559,7 @@ function App() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ cellNumber })  // Invia il nome della cella
+          body: JSON.stringify({ cellNumber })
         });
 
         if (!populateResponse.ok) {
@@ -541,45 +569,9 @@ function App() {
         const populateResult = await populateResponse.json();
         console.log('Risultato popolamento celle:', populateResult);
 
-        // Ricarica i dati dopo il popolamento
-        const reloadResponse = await fetch(`${API_URL}/api/cells`);
-        if (!reloadResponse.ok) {
-          throw new Error('Errore nel ricaricamento dei dati');
+        if (populateResult.insertedCells === 0 && !populateResult.cellExists) {
+          throw new Error(`Impossibile creare la cella ${cellNumber}`);
         }
-        const reloadData = await reloadResponse.json();
-        
-        // Aggiorna lo stato locale con i dati aggiornati
-        const updatedCells = [...cells];
-        reloadData.forEach(item => {
-          let cellIndex;
-          const cellNumber = item.cell_number;
-          
-          if (cellNumber.startsWith('Buca')) {
-            const num = parseInt(cellNumber.split(' ')[1]);
-            if (num >= 4 && num <= 13) {
-              cellIndex = num - 4;
-            } else if (num >= 30 && num <= 33) {
-              cellIndex = num - 20;  // Corretto per le buche 30-33
-            }
-          } else if (cellNumber.startsWith('Preparazione')) {
-            const num = parseInt(cellNumber.split(' ')[1]);
-            cellIndex = num + 13;
-          }
-
-          if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < updatedCells.length) {
-            updatedCells[cellIndex].cards = item.cards.map(card => ({
-              status: card.status || 'default',
-              startTime: card.startTime || null,
-              endTime: card.endTime || null,
-              TR: card.TR || '',
-              ID: card.ID || '',
-              N: card.N || '',
-              Note: card.Note || ''
-            }));
-          }
-        });
-        
-        setCells(updatedCells);
       }
 
       // Procedi con il salvataggio delle modifiche
@@ -589,7 +581,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cellNumber,  // Invia il nome della cella invece dell'indice
+          cellNumber,
           cardIndex,
           status: newStatus,
           startTime,
@@ -601,16 +593,6 @@ function App() {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Errore nel salvataggio delle modifiche');
       }
-
-      // Aggiorna lo stato locale
-      const newCells = [...cells];
-      newCells[cellIndex].cards[cardIndex] = {
-        ...newCells[cellIndex].cards[cardIndex],
-        status: newStatus,
-        startTime,
-        endTime
-      };
-      setCells(newCells);
 
       // Chiudi il dialog di conferma
       setConfirmationDialog({ open: false, cellIndex: null, cardIndex: null, step: 1 });
