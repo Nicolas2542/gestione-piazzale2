@@ -538,10 +538,8 @@ function App() {
       const currentStatus = cells[cellIndex].cards[cardIndex].status;
       
       if (currentStatus === 'yellow') {
-        // Se la cella è già gialla, il nuovo stato sarà verde se confermato, altrimenti rimane gialla
         newStatus = status ? 'green' : 'yellow';
       } else {
-        // Se la cella non è gialla, il nuovo stato sarà giallo se confermato, altrimenti rosso
         newStatus = status ? 'yellow' : 'red';
       }
 
@@ -565,6 +563,7 @@ function App() {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
             body: JSON.stringify({
               cellNumber,
@@ -575,16 +574,23 @@ function App() {
           });
 
           if (!logResponse.ok) {
-            console.error('Error logging monitoring event:', await logResponse.json());
+            const errorData = await logResponse.json();
+            throw new Error(errorData.error || 'Errore nella registrazione dell\'evento');
           }
         } catch (error) {
           console.error('Error logging monitoring event:', error);
+          showNotification(error.message || 'Errore nella registrazione dell\'evento', 'error');
         }
       }
 
       // Verifica se la cella esiste
       console.log('Verifica esistenza cella:', cellNumber);
-      const checkResponse = await fetch(`${API_URL}/api/cells/${cellNumber}`);
+      const checkResponse = await fetch(`${API_URL}/api/cells/${cellNumber}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
       if (!checkResponse.ok) {
         // Se la cella non esiste, popola tutte le celle mancanti
         console.log('Cella non trovata, popolamento celle mancanti...');
@@ -592,19 +598,20 @@ function App() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
           body: JSON.stringify({ cellNumber })
         });
 
         if (!populateResponse.ok) {
-          throw new Error('Errore durante il popolamento delle celle');
+          const errorData = await populateResponse.json();
+          throw new Error(errorData.error || 'Errore durante il popolamento delle celle');
         }
 
         const populateResult = await populateResponse.json();
         console.log('Risultato popolamento celle:', populateResult);
 
         if (!populateResult.cellExists) {
-          // Se ci sono errori specifici, mostrali
           if (populateResult.errors && populateResult.errors.length > 0) {
             throw new Error(populateResult.errors.join('\n'));
           }
@@ -618,6 +625,7 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
           cellNumber,
@@ -638,10 +646,16 @@ function App() {
 
       // Ricarica i dati dopo il salvataggio
       console.log('Ricarico dati dopo salvataggio...');
-      const finalReloadResponse = await fetch(`${API_URL}/api/cells`);
+      const finalReloadResponse = await fetch(`${API_URL}/api/cells`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
       if (!finalReloadResponse.ok) {
         throw new Error('Errore nel ricaricamento dei dati finali');
       }
+
       const finalReloadData = await finalReloadResponse.json();
       
       // Aggiorna lo stato locale con i dati finali
@@ -655,7 +669,7 @@ function App() {
           if (num >= 4 && num <= 13) {
             cellIndex = num - 4;
           } else if (num >= 30 && num <= 33) {
-            cellIndex = num - 20;  // Corretto per le buche 30-33
+            cellIndex = num - 20;
           }
         } else if (cellNumber.startsWith('Preparazione')) {
           const num = parseInt(cellNumber.split(' ')[1]);

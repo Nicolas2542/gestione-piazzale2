@@ -40,10 +40,16 @@ function Monitoring({ onBack, cells, user }) {
 
   const fetchMonitoringLogs = async () => {
     try {
-      const response = await fetch(`${API_URL}/api/monitoring-logs`);
+      const response = await fetch(`${API_URL}/api/monitoring-logs`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
       if (!response.ok) {
         throw new Error('Errore nel recupero dei log');
       }
+      
       const data = await response.json();
       setMonitoringLogs(data);
     } catch (error) {
@@ -59,27 +65,25 @@ function Monitoring({ onBack, cells, user }) {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
-  const handleReset = async () => {
+  const handleResetMonitoring = async () => {
     try {
       const response = await fetch(`${API_URL}/api/reset-monitoring`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-      
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Errore nel reset dei dati');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Errore nel reset dei dati di monitoraggio');
       }
-      
-      setResetDialog({ open: false });
-      showNotification('Log di monitoraggio resettati con successo', 'success');
-      fetchMonitoringLogs(); // Ricarica i log dopo il reset
+
+      await fetchMonitoringLogs();
+      showNotification('Dati di monitoraggio resettati con successo', 'success');
     } catch (error) {
       console.error('Error resetting monitoring data:', error);
-      showNotification(error.message || 'Errore nel reset dei log di monitoraggio', 'error');
+      showNotification(error.message || 'Errore nel reset dei dati di monitoraggio', 'error');
     }
   };
 
@@ -250,7 +254,7 @@ function Monitoring({ onBack, cells, user }) {
             Annulla
           </Button>
           <Button 
-            onClick={handleReset}
+            onClick={handleResetMonitoring}
             color="error"
             variant="contained"
           >
