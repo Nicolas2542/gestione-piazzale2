@@ -443,7 +443,7 @@ function App() {
         if (i < 10) {
           cellName = `Buca ${i + 4}`;
         } else if (i < 14) {
-          cellName = `Buca ${i + 16}`;
+          cellName = `Buca ${i + 20}`;  // Corretto per le buche 30-33
         } else {
           cellName = `Preparazione ${i - 13}`;
         }
@@ -451,15 +451,14 @@ function App() {
         const cellData = {
           cell_number: cellName,
           cards: newCells[i].cards.map(card => ({
-            status: 'default',
-            startTime: null,
-            endTime: null,
-            TR: card.TR || '',
-            ID: card.ID || '',
-            N: card.N || '',
-            Note: card.Note || ''
+            ...card,  // Mantiene tutti i dati esistenti
+            status: 'default',  // Resetta solo lo stato
+            startTime: null,    // Resetta i timestamp
+            endTime: null
           }))
         };
+
+        console.log('Salvataggio cella dopo reset:', cellName, cellData);
 
         const response = await fetch(`${API_URL}/api/cells`, {
           method: 'POST',
@@ -492,7 +491,7 @@ function App() {
           if (num >= 4 && num <= 13) {
             cellIndex = num - 4;
           } else if (num >= 30 && num <= 33) {
-            cellIndex = num - 20;
+            cellIndex = num - 20;  // Corretto per le buche 30-33
           }
         } else if (cellNumber.startsWith('Preparazione')) {
           const num = parseInt(cellNumber.split(' ')[1]);
@@ -500,14 +499,12 @@ function App() {
         }
 
         if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < updatedCells.length) {
+          console.log(`Mapping finale ${cellNumber} to index ${cellIndex}`);
           updatedCells[cellIndex].cards = item.cards.map(card => ({
-            status: card.status || 'default',
-            startTime: card.startTime || null,
-            endTime: card.endTime || null,
-            TR: card.TR || '',
-            ID: card.ID || '',
-            N: card.N || '',
-            Note: card.Note || ''
+            ...card,  // Mantiene tutti i dati esistenti
+            status: 'default',  // Resetta solo lo stato
+            startTime: null,    // Resetta i timestamp
+            endTime: null
           }));
         }
       });
