@@ -480,56 +480,37 @@ app.post('/api/populate-cells', async (req, res) => {
     console.log('Cella richiesta:', requestedCell);
     console.log('La cella esiste già?', existingCellNumbers.has(requestedCell));
     
-    if (requestedCell && !existingCellNumbers.has(requestedCell)) {
-      try {
-        console.log('Tentativo di inserimento cella:', requestedCell);
-        const result = await client.query(
-          'INSERT INTO cells (cell_number, cards) VALUES ($1, $2) RETURNING id',
-          [requestedCell, defaultCards]
-        );
-        insertedCount++;
-        console.log('Inserita cella richiesta:', requestedCell, 'ID:', result.rows[0].id);
-      } catch (error) {
-        console.error(`Errore durante l'inserimento della cella ${requestedCell}:`, error);
-        errors.push(`Errore durante l'inserimento della cella ${requestedCell}: ${error.message}`);
-      }
+    // Definisci tutte le celle che dovrebbero esistere
+    const requiredCells = [];
+    // Buche da 4 a 13
+    for (let i = 4; i <= 13; i++) {
+      requiredCells.push(`Buca ${i}`);
+    }
+    // Buche da 30 a 33
+    for (let i = 30; i <= 33; i++) {
+      requiredCells.push(`Buca ${i}`);
+    }
+    // Preparazione 1-3
+    for (let i = 1; i <= 3; i++) {
+      requiredCells.push(`Preparazione ${i}`);
     }
     
-    // Se la cella richiesta non è stata inserita, prova a inserire tutte le celle mancanti
-    if (insertedCount === 0) {
-      console.log('Nessuna cella inserita, tentativo di inserimento di tutte le celle mancanti');
-      // Definisci tutte le celle che dovrebbero esistere
-      const requiredCells = [];
-      // Buche da 4 a 13
-      for (let i = 4; i <= 13; i++) {
-        requiredCells.push(`Buca ${i}`);
-      }
-      // Buche da 30 a 33
-      for (let i = 30; i <= 33; i++) {
-        requiredCells.push(`Buca ${i}`);
-      }
-      // Preparazione 1-3
-      for (let i = 1; i <= 3; i++) {
-        requiredCells.push(`Preparazione ${i}`);
-      }
-      
-      console.log('Celle richieste:', requiredCells);
-      
-      // Inserisci solo le celle mancanti
-      for (const cellNumber of requiredCells) {
-        if (!existingCellNumbers.has(cellNumber)) {
-          try {
-            console.log('Tentativo di inserimento cella:', cellNumber);
-            const result = await client.query(
-              'INSERT INTO cells (cell_number, cards) VALUES ($1, $2) RETURNING id',
-              [cellNumber, defaultCards]
-            );
-            insertedCount++;
-            console.log('Inserita nuova cella:', cellNumber, 'ID:', result.rows[0].id);
-          } catch (error) {
-            console.error(`Errore durante l'inserimento della cella ${cellNumber}:`, error);
-            errors.push(`Errore durante l'inserimento della cella ${cellNumber}: ${error.message}`);
-          }
+    console.log('Celle richieste:', requiredCells);
+    
+    // Inserisci tutte le celle mancanti
+    for (const cellNumber of requiredCells) {
+      if (!existingCellNumbers.has(cellNumber)) {
+        try {
+          console.log('Tentativo di inserimento cella:', cellNumber);
+          const result = await client.query(
+            'INSERT INTO cells (cell_number, cards) VALUES ($1, $2) RETURNING id',
+            [cellNumber, defaultCards]
+          );
+          insertedCount++;
+          console.log('Inserita nuova cella:', cellNumber, 'ID:', result.rows[0].id);
+        } catch (error) {
+          console.error(`Errore durante l'inserimento della cella ${cellNumber}:`, error);
+          errors.push(`Errore durante l'inserimento della cella ${cellNumber}: ${error.message}`);
         }
       }
     }

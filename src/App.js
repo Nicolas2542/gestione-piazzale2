@@ -644,6 +644,48 @@ function App() {
         throw new Error(errorData.error || 'Errore nel salvataggio delle modifiche');
       }
 
+      // Ricarica i dati dopo il salvataggio
+      console.log('Ricarico dati dopo salvataggio...');
+      const finalReloadResponse = await fetch(`${API_URL}/api/cells`);
+      if (!finalReloadResponse.ok) {
+        throw new Error('Errore nel ricaricamento dei dati finali');
+      }
+      const finalReloadData = await finalReloadResponse.json();
+      
+      // Aggiorna lo stato locale con i dati finali
+      const finalCells = [...cells];
+      finalReloadData.forEach(item => {
+        let cellIndex;
+        const cellNumber = item.cell_number;
+        
+        if (cellNumber.startsWith('Buca')) {
+          const num = parseInt(cellNumber.split(' ')[1]);
+          if (num >= 4 && num <= 13) {
+            cellIndex = num - 4;
+          } else if (num >= 30 && num <= 33) {
+            cellIndex = num - 20;  // Corretto per le buche 30-33
+          }
+        } else if (cellNumber.startsWith('Preparazione')) {
+          const num = parseInt(cellNumber.split(' ')[1]);
+          cellIndex = num + 13;
+        }
+
+        if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < finalCells.length) {
+          console.log(`Mapping finale ${cellNumber} to index ${cellIndex}`);
+          finalCells[cellIndex].cards = item.cards.map(card => ({
+            status: card.status || 'default',
+            startTime: card.startTime || null,
+            endTime: card.endTime || null,
+            TR: card.TR || '',
+            ID: card.ID || '',
+            N: card.N || '',
+            Note: card.Note || ''
+          }));
+        }
+      });
+      
+      setCells(finalCells);
+
       // Chiudi il dialog di conferma
       setConfirmationDialog({ open: false, cellIndex: null, cardIndex: null, step: 1 });
 
