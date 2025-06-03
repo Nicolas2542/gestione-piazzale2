@@ -579,48 +579,6 @@ function App() {
           }
           throw new Error(`Impossibile creare la cella ${cellNumber}`);
         }
-
-        // Ricarica i dati dopo il popolamento
-        console.log('Ricarico dati dopo popolamento...');
-        const reloadResponse = await fetch(`${API_URL}/api/cells`);
-        if (!reloadResponse.ok) {
-          throw new Error('Errore nel ricaricamento dei dati');
-        }
-        const reloadData = await reloadResponse.json();
-        
-        // Aggiorna lo stato locale con i dati aggiornati
-        const updatedCells = [...cells];
-        reloadData.forEach(item => {
-          let cellIndex;
-          const cellNumber = item.cell_number;
-          
-          if (cellNumber.startsWith('Buca')) {
-            const num = parseInt(cellNumber.split(' ')[1]);
-            if (num >= 4 && num <= 13) {
-              cellIndex = num - 4;
-            } else if (num >= 30 && num <= 33) {
-              cellIndex = num - 20;  // Corretto per le buche 30-33
-            }
-          } else if (cellNumber.startsWith('Preparazione')) {
-            const num = parseInt(cellNumber.split(' ')[1]);
-            cellIndex = num + 13;
-          }
-
-          if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < updatedCells.length) {
-            console.log(`Mapping ${cellNumber} to index ${cellIndex}`);
-            updatedCells[cellIndex].cards = item.cards.map(card => ({
-              status: card.status || 'default',
-              startTime: card.startTime || null,
-              endTime: card.endTime || null,
-              TR: card.TR || '',
-              ID: card.ID || '',
-              N: card.N || '',
-              Note: card.Note || ''
-            }));
-          }
-        });
-        
-        setCells(updatedCells);
       }
 
       // Procedi con il salvataggio delle modifiche
@@ -643,6 +601,9 @@ function App() {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Errore nel salvataggio delle modifiche');
       }
+
+      const result = await response.json();
+      console.log('Risultato salvataggio:', result);
 
       // Ricarica i dati dopo il salvataggio
       console.log('Ricarico dati dopo salvataggio...');

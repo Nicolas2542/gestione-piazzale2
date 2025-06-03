@@ -332,23 +332,11 @@ app.post('/api/cells', async (req, res) => {
 app.post('/api/preposto-changes', async (req, res) => {
   let client;
   try {
-    const { cellIndex, cardIndex, status, startTime, endTime } = req.body;
+    const { cellNumber, cardIndex, status, startTime, endTime } = req.body;
     console.log('=== DEBUG PREPOSTO CHANGES ===');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
 
     client = await pool.connect();
-
-    // Converti l'indice della cella nel numero della cella
-    let cellNumber;
-    if (cellIndex < 10) {
-      cellNumber = `Buca ${cellIndex + 4}`;
-    } else if (cellIndex < 14) {
-      cellNumber = `Buca ${cellIndex + 16}`;
-    } else {
-      cellNumber = `Preparazione ${cellIndex - 13}`;
-    }
-
-    console.log('Cell number:', cellNumber);
 
     // Recupera la cella esistente
     const existingCell = await client.query(
@@ -370,11 +358,11 @@ app.post('/api/preposto-changes', async (req, res) => {
         Note: ''
       }));
 
-      await client.query(
-        'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+      const insertResult = await client.query(
+        'INSERT INTO cells (cell_number, cards) VALUES ($1, $2) RETURNING id',
         [cellNumber, JSON.stringify(existingCards)]
       );
-      console.log('Nuova cella creata:', cellNumber);
+      console.log('Nuova cella creata:', cellNumber, 'ID:', insertResult.rows[0].id);
     } else {
       try {
         // Verifica se cards è già un oggetto
@@ -424,13 +412,22 @@ app.post('/api/preposto-changes', async (req, res) => {
     };
 
     // Salva le modifiche
-    await client.query(
-      'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
+    const updateResult = await client.query(
+      'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2 RETURNING id',
       [JSON.stringify(existingCards), cellNumber]
     );
 
-    console.log('Modifiche preposto salvate con successo');
-    res.json({ message: 'Modifiche salvate con successo' });
+    if (updateResult.rows.length === 0) {
+      throw new Error(`Impossibile aggiornare la cella ${cellNumber}`);
+    }
+
+    console.log('Modifiche preposto salvate con successo per cella:', cellNumber, 'ID:', updateResult.rows[0].id);
+    res.json({ 
+      message: 'Modifiche salvate con successo',
+      cellNumber,
+      cardIndex,
+      status
+    });
   } catch (error) {
     console.error('=== ERRORE SALVATAGGIO MODIFICHE PREPOSTO ===');
     console.error('Dettagli errore:', {
