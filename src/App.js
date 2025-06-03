@@ -93,13 +93,13 @@ function App() {
             if (cellNumber.startsWith('Buca')) {
               const num = parseInt(cellNumber.split(' ')[1]);
               if (num >= 4 && num <= 13) {
-                cellIndex = num - 4;  // Buca 4 -> index 0, Buca 13 -> index 9
+                cellIndex = num - 4;
               } else if (num >= 30 && num <= 33) {
-                cellIndex = num - 20;  // Buca 30 -> index 10, Buca 33 -> index 13
+                cellIndex = num - 20;  // Corretto per le buche 30-33
               }
             } else if (cellNumber.startsWith('Preparazione')) {
               const num = parseInt(cellNumber.split(' ')[1]);
-              cellIndex = num + 13;  // Preparazione 1 -> index 14, Preparazione 3 -> index 16
+              cellIndex = num + 13;
             }
 
             if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < updatedCells.length) {
@@ -984,7 +984,7 @@ function App() {
                     fontWeight: 'bold',
                     display: 'block'
                   }}>
-                    {actualIndex < 14 ? `Buca ${actualIndex + 16}` : `Preparazione ${actualIndex - 13}`}
+                    {actualIndex < 14 ? `Buca ${actualIndex + 20}` : `Preparazione ${actualIndex - 13}`}
                   </Typography>
                 </Box>
                 {[0, 1, 2, 3].map((cardIndex) => (
