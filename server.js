@@ -110,6 +110,17 @@ async function initializeDatabase() {
     `);
     console.log('Tabella sessions verificata/creata con successo');
 
+    // Crea la tabella monitoring_logs se non esiste
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS monitoring_logs (
+        id SERIAL PRIMARY KEY,
+        event VARCHAR(100) NOT NULL,
+        details JSONB,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('Tabella monitoring_logs verificata/creata con successo');
+
     // Verifica se ci sono già celle nel database
     const result = await client.query('SELECT COUNT(*) FROM cells');
     console.log('Numero di celle nel database:', result.rows[0].count);
@@ -538,6 +549,56 @@ app.post('/api/populate-cells', async (req, res) => {
     if (client) {
       client.release();
     }
+  }
+});
+
+// Get monitoring logs endpoint
+app.get('/api/monitoring-logs', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM monitoring_logs 
+      ORDER BY created_at DESC 
+      LIMIT 100
+    `);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Errore durante il recupero dei log di monitoraggio:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+});
+
+// Post monitoring log endpoint
+app.post('/api/monitoring-logs', async (req, res) => {
+  try {
+    const { event, details } = req.body;
+    const result = await pool.query(
+      'INSERT INTO monitoring_logs (event, details) VALUES ($1, $2) RETURNING *',
+      [event, JSON.stringify(details)]
+    );
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Errore durante il salvataggio del log di monitoraggio:', error);
+    res.status(500).json({ error: 'Errore del server' });
+  }
+});
+
+// Get single cell endpoint
+app.get('/api/cells/:cellNumber', async (req, res) => {
+  try {
+    const { cellNumber } = req.params;
+    const result = await pool.query(
+      'SELECT * FROM cells WHERE cell_number = $1',
+      [cellNumber]
+    );
+    
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Cella non trovata' });
+    } else {
+      res.json(result.rows[0]);
+    }
+  } catch (error) {
+    console.error('Errore durante il recupero della cella:', error);
+    res.status(500).json({ error: 'Errore del server' });
   }
 });
 
