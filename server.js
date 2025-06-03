@@ -462,6 +462,7 @@ app.post('/api/populate-cells', async (req, res) => {
     // Verifica quali celle esistono già
     const existingCells = await client.query('SELECT cell_number FROM cells');
     const existingCellNumbers = new Set(existingCells.rows.map(row => row.cell_number));
+    console.log('Celle esistenti:', Array.from(existingCellNumbers));
     
     // Prepara i dati per le nuove celle
     const defaultCards = JSON.stringify([
@@ -476,14 +477,18 @@ app.post('/api/populate-cells', async (req, res) => {
     
     // Prima verifica se la cella richiesta esiste
     const requestedCell = req.body.cellNumber;
+    console.log('Cella richiesta:', requestedCell);
+    console.log('La cella esiste già?', existingCellNumbers.has(requestedCell));
+    
     if (requestedCell && !existingCellNumbers.has(requestedCell)) {
       try {
-        await client.query(
-          'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+        console.log('Tentativo di inserimento cella:', requestedCell);
+        const result = await client.query(
+          'INSERT INTO cells (cell_number, cards) VALUES ($1, $2) RETURNING id',
           [requestedCell, defaultCards]
         );
         insertedCount++;
-        console.log('Inserita cella richiesta:', requestedCell);
+        console.log('Inserita cella richiesta:', requestedCell, 'ID:', result.rows[0].id);
       } catch (error) {
         console.error(`Errore durante l'inserimento della cella ${requestedCell}:`, error);
         errors.push(`Errore durante l'inserimento della cella ${requestedCell}: ${error.message}`);
@@ -492,6 +497,7 @@ app.post('/api/populate-cells', async (req, res) => {
     
     // Se la cella richiesta non è stata inserita, prova a inserire tutte le celle mancanti
     if (insertedCount === 0) {
+      console.log('Nessuna cella inserita, tentativo di inserimento di tutte le celle mancanti');
       // Definisci tutte le celle che dovrebbero esistere
       const requiredCells = [];
       // Buche da 4 a 13
@@ -507,16 +513,19 @@ app.post('/api/populate-cells', async (req, res) => {
         requiredCells.push(`Preparazione ${i}`);
       }
       
+      console.log('Celle richieste:', requiredCells);
+      
       // Inserisci solo le celle mancanti
       for (const cellNumber of requiredCells) {
         if (!existingCellNumbers.has(cellNumber)) {
           try {
-            await client.query(
-              'INSERT INTO cells (cell_number, cards) VALUES ($1, $2)',
+            console.log('Tentativo di inserimento cella:', cellNumber);
+            const result = await client.query(
+              'INSERT INTO cells (cell_number, cards) VALUES ($1, $2) RETURNING id',
               [cellNumber, defaultCards]
             );
             insertedCount++;
-            console.log('Inserita nuova cella:', cellNumber);
+            console.log('Inserita nuova cella:', cellNumber, 'ID:', result.rows[0].id);
           } catch (error) {
             console.error(`Errore durante l'inserimento della cella ${cellNumber}:`, error);
             errors.push(`Errore durante l'inserimento della cella ${cellNumber}: ${error.message}`);
@@ -531,6 +540,7 @@ app.post('/api/populate-cells', async (req, res) => {
       [requestedCell]
     );
     const cellExists = finalCheck.rows[0].exists;
+    console.log('Verifica finale - La cella esiste?', cellExists);
     
     res.json({ 
       message: 'Operazione completata con successo',
