@@ -537,7 +537,17 @@ function App() {
       console.log('Nome cella determinato:', cellNumber);
 
       // Determina il nuovo stato della card
-      const newStatus = status ? 'yellow' : 'red';
+      let newStatus;
+      const currentStatus = cells[cellIndex].cards[cardIndex].status;
+      
+      if (currentStatus === 'yellow') {
+        // Se la cella è già gialla, il nuovo stato sarà verde se confermato, altrimenti rimane gialla
+        newStatus = status ? 'green' : 'yellow';
+      } else {
+        // Se la cella non è gialla, il nuovo stato sarà giallo se confermato, altrimenti rosso
+        newStatus = status ? 'yellow' : 'red';
+      }
+
       const startTime = newStatus === 'yellow' ? new Date().toISOString() : null;
       const endTime = newStatus === 'green' ? new Date().toISOString() : null;
 
@@ -1218,7 +1228,7 @@ function App() {
           <Typography>
             {confirmationDialog.step === 1 ? 
               "Arrivato in buca?" : 
-              "Hanno inviato la distinta e controllato la merce?"
+              "Hanno controllato la merce e inviato la distinta?"
             }
           </Typography>
         </DialogContent>
