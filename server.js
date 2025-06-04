@@ -340,6 +340,64 @@ app.post('/api/cells', async (req, res) => {
   }
 });
 
+// Post monitoring log endpoint
+app.post('/api/monitoring-logs', async (req, res) => {
+  let client;
+  try {
+    const { event, details } = req.body;
+    console.log('=== DEBUG MONITORING LOGS ===');
+    console.log('Event:', event);
+    console.log('Details:', JSON.stringify(details, null, 2));
+
+    client = await pool.connect();
+    
+    // Verifica che la tabella monitoring_logs esista
+    const tableCheck = await client.query(`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_name = 'monitoring_logs'
+      );
+    `);
+
+    if (!tableCheck.rows[0].exists) {
+      console.log('Creazione tabella monitoring_logs...');
+      await client.query(`
+        CREATE TABLE IF NOT EXISTS monitoring_logs (
+          id SERIAL PRIMARY KEY,
+          event VARCHAR(100) NOT NULL,
+          details JSONB,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    }
+
+    // Inserisci il log
+    const result = await client.query(
+      'INSERT INTO monitoring_logs (event, details) VALUES ($1, $2) RETURNING *',
+      [event, JSON.stringify(details)]
+    );
+    
+    console.log('Log salvato con successo:', result.rows[0]);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('=== ERRORE SALVATAGGIO LOG ===');
+    console.error('Dettagli errore:', {
+      name: error.name,
+      code: error.code,
+      message: error.message,
+      stack: error.stack
+    });
+    res.status(500).json({ 
+      error: 'Errore del server',
+      details: error.message
+    });
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+});
+
 // Preposto changes endpoint
 app.post('/api/preposto-changes', async (req, res) => {
   let client;
@@ -443,18 +501,23 @@ app.post('/api/preposto-changes', async (req, res) => {
 
       console.log('Card aggiornata:', existingCards[cardIndex]);
 
-      // Registra il log di inizio attività
-      await client.query(
-        'INSERT INTO monitoring_logs (event, details) VALUES ($1, $2)',
-        ['inizio_attivita', JSON.stringify({
-          cellNumber,
-          cardIndex,
-          prepostoId,
-          taskId,
-          timestamp: currentTime
-        })]
-      );
-      console.log('Log di inizio attività registrato');
+      try {
+        // Registra il log di inizio attività
+        await client.query(
+          'INSERT INTO monitoring_logs (event, details) VALUES ($1, $2)',
+          ['inizio_attivita', JSON.stringify({
+            cellNumber,
+            cardIndex,
+            prepostoId,
+            taskId,
+            timestamp: currentTime
+          })]
+        );
+        console.log('Log di inizio attività registrato');
+      } catch (error) {
+        console.error('Errore durante la registrazione del log di inizio:', error);
+        // Non blocchiamo il flusso se il log fallisce
+      }
     } else if (status === 'verde') {
       console.log('Cambio stato a VERDE');
       // Fine attività
@@ -486,20 +549,25 @@ app.post('/api/preposto-changes', async (req, res) => {
 
       console.log('Card aggiornata:', existingCards[cardIndex]);
 
-      // Registra il log di fine attività
-      await client.query(
-        'INSERT INTO monitoring_logs (event, details) VALUES ($1, $2)',
-        ['fine_attivita', JSON.stringify({
-          cellNumber,
-          cardIndex,
-          prepostoId,
-          taskId,
-          startTime: existingCards[cardIndex].startTime,
-          endTime: currentTime,
-          totalTime
-        })]
-      );
-      console.log('Log di fine attività registrato');
+      try {
+        // Registra il log di fine attività
+        await client.query(
+          'INSERT INTO monitoring_logs (event, details) VALUES ($1, $2)',
+          ['fine_attivita', JSON.stringify({
+            cellNumber,
+            cardIndex,
+            prepostoId,
+            taskId,
+            startTime: existingCards[cardIndex].startTime,
+            endTime: currentTime,
+            totalTime
+          })]
+        );
+        console.log('Log di fine attività registrato');
+      } catch (error) {
+        console.error('Errore durante la registrazione del log di fine:', error);
+        // Non blocchiamo il flusso se il log fallisce
+      }
     } else {
       console.log('Cambio stato a:', status);
       // Altri stati
@@ -519,6 +587,7 @@ app.post('/api/preposto-changes', async (req, res) => {
       [JSON.stringify(existingCards), cellNumber]
     );
     console.log('Modifiche salvate con successo. ID:', updateResult.rows[0].id);
+
     res.json({ 
       message: 'Modifiche salvate con successo',
       cellNumber,
@@ -651,21 +720,6 @@ app.get('/api/monitoring-logs', async (req, res) => {
     res.json(result.rows);
   } catch (error) {
     console.error('Errore durante il recupero dei log di monitoraggio:', error);
-    res.status(500).json({ error: 'Errore del server' });
-  }
-});
-
-// Post monitoring log endpoint
-app.post('/api/monitoring-logs', async (req, res) => {
-  try {
-    const { event, details } = req.body;
-    const result = await pool.query(
-      'INSERT INTO monitoring_logs (event, details) VALUES ($1, $2) RETURNING *',
-      [event, JSON.stringify(details)]
-    );
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Errore durante il salvataggio del log di monitoraggio:', error);
     res.status(500).json({ error: 'Errore del server' });
   }
 });
