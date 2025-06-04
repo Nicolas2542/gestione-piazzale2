@@ -422,8 +422,14 @@ app.post('/api/preposto-changes', async (req, res) => {
     const currentTime = new Date().toISOString();
     let totalTime = null;
 
+    console.log('=== DEBUG TEMPI ===');
+    console.log('Stato richiesto:', status);
+    console.log('Tempo corrente:', currentTime);
+    console.log('Stato attuale della card:', existingCards[cardIndex]);
+
     // Gestione del cambio di stato
     if (status === 'giallo') {
+      console.log('Cambio stato a GIALLO');
       // Inizio attività
       existingCards[cardIndex] = {
         ...existingCards[cardIndex],
@@ -434,6 +440,8 @@ app.post('/api/preposto-changes', async (req, res) => {
         prepostoId: prepostoId || existingCards[cardIndex].prepostoId,
         taskId: taskId || existingCards[cardIndex].taskId
       };
+
+      console.log('Card aggiornata:', existingCards[cardIndex]);
 
       // Registra il log di inizio attività
       await client.query(
@@ -446,11 +454,17 @@ app.post('/api/preposto-changes', async (req, res) => {
           timestamp: currentTime
         })]
       );
+      console.log('Log di inizio attività registrato');
     } else if (status === 'verde') {
+      console.log('Cambio stato a VERDE');
       // Fine attività
       const start = existingCards[cardIndex].startTime ? new Date(existingCards[cardIndex].startTime) : new Date(currentTime);
       const end = new Date(currentTime);
       const diffMs = end - start;
+      
+      console.log('Tempo di inizio:', start);
+      console.log('Tempo di fine:', end);
+      console.log('Differenza in millisecondi:', diffMs);
       
       // Calcola ore, minuti e secondi
       const hours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -458,6 +472,7 @@ app.post('/api/preposto-changes', async (req, res) => {
       const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
       
       totalTime = `${hours}h ${minutes}m ${seconds}s`;
+      console.log('Tempo totale calcolato:', totalTime);
 
       existingCards[cardIndex] = {
         ...existingCards[cardIndex],
@@ -468,6 +483,8 @@ app.post('/api/preposto-changes', async (req, res) => {
         prepostoId: prepostoId || existingCards[cardIndex].prepostoId,
         taskId: taskId || existingCards[cardIndex].taskId
       };
+
+      console.log('Card aggiornata:', existingCards[cardIndex]);
 
       // Registra il log di fine attività
       await client.query(
@@ -482,7 +499,9 @@ app.post('/api/preposto-changes', async (req, res) => {
           totalTime
         })]
       );
+      console.log('Log di fine attività registrato');
     } else {
+      console.log('Cambio stato a:', status);
       // Altri stati
       existingCards[cardIndex] = {
         ...existingCards[cardIndex],
@@ -490,19 +509,16 @@ app.post('/api/preposto-changes', async (req, res) => {
         prepostoId: prepostoId || existingCards[cardIndex].prepostoId,
         taskId: taskId || existingCards[cardIndex].taskId
       };
+      console.log('Card aggiornata:', existingCards[cardIndex]);
     }
 
     // Salva le modifiche
+    console.log('Salvataggio modifiche nel database...');
     const updateResult = await client.query(
       'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2 RETURNING id',
       [JSON.stringify(existingCards), cellNumber]
     );
-
-    if (updateResult.rows.length === 0) {
-      throw new Error(`Impossibile aggiornare la cella ${cellNumber}`);
-    }
-
-    console.log('Modifiche preposto salvate con successo per cella:', cellNumber, 'ID:', updateResult.rows[0].id);
+    console.log('Modifiche salvate con successo. ID:', updateResult.rows[0].id);
     res.json({ 
       message: 'Modifiche salvate con successo',
       cellNumber,
