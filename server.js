@@ -344,7 +344,7 @@ app.post('/api/cells', async (req, res) => {
 app.post('/api/preposto-changes', async (req, res) => {
   let client;
   try {
-    const { cellNumber, cardIndex, status, startTime, endTime } = req.body;
+    const { cellNumber, cardIndex, status, startTime, endTime, prepostoId, taskId } = req.body;
     console.log('=== DEBUG PREPOSTO CHANGES ===');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
 
@@ -359,11 +359,13 @@ app.post('/api/preposto-changes', async (req, res) => {
     let existingCards;
     if (existingCell.rows.length === 0) {
       console.log('Cella non trovata, creazione in corso:', cellNumber);
-      // Se la cella non esiste, creala con le card di default
       existingCards = Array(4).fill(null).map(() => ({
         status: 'default',
         startTime: null,
         endTime: null,
+        totalTime: null,
+        prepostoId: '',
+        taskId: '',
         TR: '',
         ID: '',
         N: '',
@@ -377,18 +379,19 @@ app.post('/api/preposto-changes', async (req, res) => {
       console.log('Nuova cella creata:', cellNumber, 'ID:', insertResult.rows[0].id);
     } else {
       try {
-        // Verifica se cards è già un oggetto
         existingCards = typeof existingCell.rows[0].cards === 'object' 
           ? existingCell.rows[0].cards 
           : JSON.parse(existingCell.rows[0].cards);
         
-        // Verifica che existingCards sia un array
         if (!Array.isArray(existingCards)) {
           console.error('Cards non è un array:', existingCards);
           existingCards = Array(4).fill(null).map(() => ({
             status: 'default',
             startTime: null,
             endTime: null,
+            totalTime: null,
+            prepostoId: '',
+            taskId: '',
             TR: '',
             ID: '',
             N: '',
@@ -397,11 +400,13 @@ app.post('/api/preposto-changes', async (req, res) => {
         }
       } catch (error) {
         console.error('Errore nel parsing delle cards:', error);
-        console.error('Cards ricevute:', existingCell.rows[0].cards);
         existingCards = Array(4).fill(null).map(() => ({
           status: 'default',
           startTime: null,
           endTime: null,
+          totalTime: null,
+          prepostoId: '',
+          taskId: '',
           TR: '',
           ID: '',
           N: '',
@@ -410,18 +415,81 @@ app.post('/api/preposto-changes', async (req, res) => {
       }
     }
 
-    // Verifica che l'indice della card sia valido
     if (cardIndex < 0 || cardIndex >= existingCards.length) {
       throw new Error(`Indice card non valido: ${cardIndex}`);
     }
 
-    // Aggiorna solo i campi specifici della card
-    existingCards[cardIndex] = {
-      ...existingCards[cardIndex],
-      status,
-      startTime,
-      endTime
-    };
+    const currentTime = new Date().toISOString();
+    let totalTime = null;
+
+    // Gestione del cambio di stato
+    if (status === 'giallo') {
+      // Inizio attività
+      existingCards[cardIndex] = {
+        ...existingCards[cardIndex],
+        status,
+        startTime: currentTime,
+        endTime: null,
+        totalTime: null,
+        prepostoId: prepostoId || existingCards[cardIndex].prepostoId,
+        taskId: taskId || existingCards[cardIndex].taskId
+      };
+
+      // Registra il log di inizio attività
+      await client.query(
+        'INSERT INTO monitoring_logs (event, details) VALUES ($1, $2)',
+        ['inizio_attivita', JSON.stringify({
+          cellNumber,
+          cardIndex,
+          prepostoId,
+          taskId,
+          timestamp: currentTime
+        })]
+      );
+    } else if (status === 'verde' && existingCards[cardIndex].startTime) {
+      // Fine attività
+      const start = new Date(existingCards[cardIndex].startTime);
+      const end = new Date(currentTime);
+      const diffMs = end - start;
+      
+      // Calcola ore, minuti e secondi
+      const hours = Math.floor(diffMs / (1000 * 60 * 60));
+      const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+      
+      totalTime = `${hours}h ${minutes}m ${seconds}s`;
+
+      existingCards[cardIndex] = {
+        ...existingCards[cardIndex],
+        status,
+        endTime: currentTime,
+        totalTime,
+        prepostoId: prepostoId || existingCards[cardIndex].prepostoId,
+        taskId: taskId || existingCards[cardIndex].taskId
+      };
+
+      // Registra il log di fine attività
+      await client.query(
+        'INSERT INTO monitoring_logs (event, details) VALUES ($1, $2)',
+        ['fine_attivita', JSON.stringify({
+          cellNumber,
+          cardIndex,
+          prepostoId,
+          taskId,
+          startTime: existingCards[cardIndex].startTime,
+          endTime: currentTime,
+          totalTime
+        })]
+      );
+    } else {
+      // Altri stati
+      existingCards[cardIndex] = {
+        ...existingCards[cardIndex],
+        status,
+        prepostoId: prepostoId || existingCards[cardIndex].prepostoId,
+        taskId: taskId || existingCards[cardIndex].taskId
+      };
+    }
 
     // Salva le modifiche
     const updateResult = await client.query(
@@ -438,7 +506,10 @@ app.post('/api/preposto-changes', async (req, res) => {
       message: 'Modifiche salvate con successo',
       cellNumber,
       cardIndex,
-      status
+      status,
+      startTime: existingCards[cardIndex].startTime,
+      endTime: existingCards[cardIndex].endTime,
+      totalTime: existingCards[cardIndex].totalTime
     });
   } catch (error) {
     console.error('=== ERRORE SALVATAGGIO MODIFICHE PREPOSTO ===');
