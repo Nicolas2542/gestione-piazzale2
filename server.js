@@ -371,10 +371,13 @@ app.post('/api/monitoring-logs', async (req, res) => {
       `);
     }
 
+    // Verifica che i dettagli siano validi
+    const validDetails = details ? JSON.stringify(details) : '{}';
+
     // Inserisci il log
     const result = await client.query(
       'INSERT INTO monitoring_logs (event, details) VALUES ($1, $2) RETURNING *',
-      [event, JSON.stringify(details)]
+      [event, validDetails]
     );
     
     console.log('Log salvato con successo:', result.rows[0]);
@@ -387,9 +390,10 @@ app.post('/api/monitoring-logs', async (req, res) => {
       message: error.message,
       stack: error.stack
     });
-    res.status(500).json({ 
-      error: 'Errore del server',
-      details: error.message
+    // Invia una risposta di successo anche in caso di errore per non bloccare il flusso
+    res.json({ 
+      message: 'Log non salvato ma operazione continuata',
+      error: error.message
     });
   } finally {
     if (client) {
