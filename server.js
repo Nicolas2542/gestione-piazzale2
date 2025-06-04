@@ -446,9 +446,9 @@ app.post('/api/preposto-changes', async (req, res) => {
           timestamp: currentTime
         })]
       );
-    } else if (status === 'verde' && existingCards[cardIndex].startTime) {
+    } else if (status === 'verde') {
       // Fine attività
-      const start = new Date(existingCards[cardIndex].startTime);
+      const start = existingCards[cardIndex].startTime ? new Date(existingCards[cardIndex].startTime) : new Date(currentTime);
       const end = new Date(currentTime);
       const diffMs = end - start;
       
@@ -462,6 +462,7 @@ app.post('/api/preposto-changes', async (req, res) => {
       existingCards[cardIndex] = {
         ...existingCards[cardIndex],
         status,
+        startTime: existingCards[cardIndex].startTime || currentTime,
         endTime: currentTime,
         totalTime,
         prepostoId: prepostoId || existingCards[cardIndex].prepostoId,
