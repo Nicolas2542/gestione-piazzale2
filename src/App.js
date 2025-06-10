@@ -893,10 +893,10 @@ function App() {
         </Grid>
 
         {/* Buche da 30 a Preparazione 2 */}
-        <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>Buca 30 - Preparazione 2</Typography>
+        <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>Buca 30 - Buca 33 - Preparazione 2</Typography>
         <Grid container spacing={2} direction="row" wrap="nowrap" sx={{ overflowX: 'auto' }}>
           {cells.filter(cell => {
-            if (/^Buca (3[0-2])$/.test(cell.id)) return true;
+            if (/^Buca (3[0-3])$/.test(cell.id)) return true;
             if (/^Preparazione ([1-2])$/.test(cell.id)) return true;
             return false;
           }).map((cell, cellIndex) => (
