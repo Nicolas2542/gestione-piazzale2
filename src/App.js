@@ -759,15 +759,15 @@ function App() {
 
       <Grid container spacing={1}>
         {cells.map((cell, cellIndex) => (
-          <Grid item xs={6} sm={4} md={3} lg={2} key={cell.id}>
-            <Card sx={{ maxWidth: 200, mx: 'auto' }}>
+          <Grid item xs={12} key={cell.id}>
+            <Card sx={{ maxWidth: '100%', mx: 'auto' }}>
               <CardContent sx={{ p: 1 }}>
                 <Typography variant="subtitle2" gutterBottom align="center">
                   {cell.id}
                 </Typography>
                 <Grid container spacing={0.5}>
                   {cell.cards.map((card, cardIndex) => (
-                    <Grid item xs={12} key={cardIndex}>
+                    <Grid item xs={3} key={cardIndex}>
                       <Box sx={{ 
                         p: 0.5, 
                         border: '1px solid #ddd',
@@ -816,65 +816,63 @@ function App() {
                             {card.message}
                           </Typography>
                         )}
-                        {user === 'admin' && (
-                          <Box sx={{ mt: 0.5 }}>
-                            <TextField
-                              size="small"
-                              label="TR"
-                              value={card.TR}
-                              onChange={(e) => handleCellChange(cellIndex, 'TR', e.target.value, cardIndex)}
-                              fullWidth
-                              sx={{ mb: 0.5 }}
-                              InputProps={{
-                                sx: { fontSize: '0.7rem', height: '28px' }
-                              }}
-                              InputLabelProps={{
-                                sx: { fontSize: '0.7rem' }
-                              }}
-                            />
-                            <TextField
-                              size="small"
-                              label="ID"
-                              value={card.ID}
-                              onChange={(e) => handleCellChange(cellIndex, 'ID', e.target.value, cardIndex)}
-                              fullWidth
-                              sx={{ mb: 0.5 }}
-                              InputProps={{
-                                sx: { fontSize: '0.7rem', height: '28px' }
-                              }}
-                              InputLabelProps={{
-                                sx: { fontSize: '0.7rem' }
-                              }}
-                            />
-                            <TextField
-                              size="small"
-                              label="N"
-                              value={card.N}
-                              onChange={(e) => handleCellChange(cellIndex, 'N', e.target.value, cardIndex)}
-                              fullWidth
-                              sx={{ mb: 0.5 }}
-                              InputProps={{
-                                sx: { fontSize: '0.7rem', height: '28px' }
-                              }}
-                              InputLabelProps={{
-                                sx: { fontSize: '0.7rem' }
-                              }}
-                            />
-                            <TextField
-                              size="small"
-                              label="Note"
-                              value={card.Note}
-                              onChange={(e) => handleCellChange(cellIndex, 'Note', e.target.value, cardIndex)}
-                              fullWidth
-                              InputProps={{
-                                sx: { fontSize: '0.7rem', height: '28px' }
-                              }}
-                              InputLabelProps={{
-                                sx: { fontSize: '0.7rem' }
-                              }}
-                            />
-                          </Box>
-                        )}
+                        <Box sx={{ mt: 0.5 }}>
+                          <TextField
+                            size="small"
+                            label="TR"
+                            value={card.TR}
+                            onChange={(e) => handleCellChange(cellIndex, 'TR', e.target.value, cardIndex)}
+                            fullWidth
+                            sx={{ mb: 0.5 }}
+                            InputProps={{
+                              sx: { fontSize: '0.7rem', height: '28px' }
+                            }}
+                            InputLabelProps={{
+                              sx: { fontSize: '0.7rem' }
+                            }}
+                          />
+                          <TextField
+                            size="small"
+                            label="ID"
+                            value={card.ID}
+                            onChange={(e) => handleCellChange(cellIndex, 'ID', e.target.value, cardIndex)}
+                            fullWidth
+                            sx={{ mb: 0.5 }}
+                            InputProps={{
+                              sx: { fontSize: '0.7rem', height: '28px' }
+                            }}
+                            InputLabelProps={{
+                              sx: { fontSize: '0.7rem' }
+                            }}
+                          />
+                          <TextField
+                            size="small"
+                            label="N"
+                            value={card.N}
+                            onChange={(e) => handleCellChange(cellIndex, 'N', e.target.value, cardIndex)}
+                            fullWidth
+                            sx={{ mb: 0.5 }}
+                            InputProps={{
+                              sx: { fontSize: '0.7rem', height: '28px' }
+                            }}
+                            InputLabelProps={{
+                              sx: { fontSize: '0.7rem' }
+                            }}
+                          />
+                          <TextField
+                            size="small"
+                            label="Note"
+                            value={card.Note}
+                            onChange={(e) => handleCellChange(cellIndex, 'Note', e.target.value, cardIndex)}
+                            fullWidth
+                            InputProps={{
+                              sx: { fontSize: '0.7rem', height: '28px' }
+                            }}
+                            InputLabelProps={{
+                              sx: { fontSize: '0.7rem' }
+                            }}
+                          />
+                        </Box>
                       </Box>
                     </Grid>
                   ))}
