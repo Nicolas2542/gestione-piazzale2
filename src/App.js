@@ -758,24 +758,32 @@ function App() {
       </Box>
 
       <Grid container spacing={1}>
-        {cells.map((cell, cellIndex) => (
-          <Grid item xs={12} key={cell.id}>
-            <Card sx={{ maxWidth: '100%', mx: 'auto' }}>
-              <CardContent sx={{ p: 1 }}>
-                <Typography variant="subtitle2" gutterBottom align="center">
-                  {cell.id}
-                </Typography>
-                <Grid container spacing={0.5}>
-                  {cell.cards.map((card, cardIndex) => (
-                    <Grid item xs={12} key={cardIndex}>
-                      <Box sx={{ 
-                        p: 0.5, 
+        {/* Buche da 4 a 13 */}
+        <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Buca 4 - Buca 13</Typography>
+        <Grid container spacing={2} direction="row" wrap="nowrap" sx={{ overflowX: 'auto' }}>
+          {cells.filter(cell => {
+            const match = cell.id.match(/^Buca (\d+)$/);
+            if (!match) return false;
+            const num = parseInt(match[1]);
+            return num >= 4 && num <= 13;
+          }).map((cell, cellIndex) => (
+            <Grid item key={cell.id} sx={{ minWidth: 170 }}>
+              <Card sx={{ maxWidth: 160, mx: 'auto' }}>
+                <CardContent sx={{ p: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom align="center">
+                    {cell.id}
+                  </Typography>
+                  <Box display="flex" flexDirection="column" gap={1}>
+                    {cell.cards.map((card, cardIndex) => (
+                      <Box key={cardIndex} sx={{
+                        p: 0.5,
                         border: '1px solid #ddd',
                         borderRadius: 1,
+                        mb: 0.5,
                         display: 'flex',
                         flexDirection: 'column',
                         gap: 0.5,
-                        maxWidth: '150px',
+                        maxWidth: '140px',
                         mx: 'auto'
                       }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -788,14 +796,14 @@ function App() {
                               variant="contained"
                               onClick={() => setConfirmationDialog({
                                 open: true,
-                                cellIndex,
+                                cellIndex: cells.findIndex(c => c.id === cell.id),
                                 cardIndex,
                                 step: card.status === 'arrivato' ? 2 : 1,
-                                message: card.status === 'arrivato' ? 
-                                  "Hanno controllato la merce e inviato la distinta?" : 
+                                message: card.status === 'arrivato' ?
+                                  "Hanno controllato la merce e inviato la distinta?" :
                                   "E' arrivato in buca?"
                               })}
-                              sx={{ 
+                              sx={{
                                 minWidth: '30px',
                                 height: '20px',
                                 fontSize: '0.7rem',
@@ -807,9 +815,9 @@ function App() {
                           )}
                         </Box>
                         {card.message && (
-                          <Typography 
-                            variant="caption" 
-                            sx={{ 
+                          <Typography
+                            variant="caption"
+                            sx={{
                               color: card.status === 'ritardo' ? 'error.main' : 'success.main',
                               fontWeight: 'bold',
                               fontSize: '0.7rem'
@@ -823,7 +831,7 @@ function App() {
                             size="small"
                             label="TR"
                             value={card.TR}
-                            onChange={(e) => handleCellChange(cellIndex, 'TR', e.target.value, cardIndex)}
+                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'TR', e.target.value, cardIndex)}
                             fullWidth
                             sx={{ mb: 0.5 }}
                             InputProps={{
@@ -837,7 +845,7 @@ function App() {
                             size="small"
                             label="ID"
                             value={card.ID}
-                            onChange={(e) => handleCellChange(cellIndex, 'ID', e.target.value, cardIndex)}
+                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'ID', e.target.value, cardIndex)}
                             fullWidth
                             sx={{ mb: 0.5 }}
                             InputProps={{
@@ -851,7 +859,7 @@ function App() {
                             size="small"
                             label="N"
                             value={card.N}
-                            onChange={(e) => handleCellChange(cellIndex, 'N', e.target.value, cardIndex)}
+                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'N', e.target.value, cardIndex)}
                             fullWidth
                             sx={{ mb: 0.5 }}
                             InputProps={{
@@ -865,7 +873,7 @@ function App() {
                             size="small"
                             label="Note"
                             value={card.Note}
-                            onChange={(e) => handleCellChange(cellIndex, 'Note', e.target.value, cardIndex)}
+                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'Note', e.target.value, cardIndex)}
                             fullWidth
                             InputProps={{
                               sx: { fontSize: '0.7rem', height: '28px' }
@@ -876,13 +884,146 @@ function App() {
                           />
                         </Box>
                       </Box>
-                    </Grid>
-                  ))}
-                </Grid>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
+                    ))}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+
+        {/* Buche da 30 a Preparazione 2 */}
+        <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>Buca 30 - Preparazione 2</Typography>
+        <Grid container spacing={2} direction="row" wrap="nowrap" sx={{ overflowX: 'auto' }}>
+          {cells.filter(cell => {
+            if (/^Buca (3[0-3])$/.test(cell.id)) return true;
+            if (/^Preparazione ([1-2])$/.test(cell.id)) return true;
+            return false;
+          }).map((cell, cellIndex) => (
+            <Grid item key={cell.id} sx={{ minWidth: 170 }}>
+              <Card sx={{ maxWidth: 160, mx: 'auto' }}>
+                <CardContent sx={{ p: 1 }}>
+                  <Typography variant="subtitle2" gutterBottom align="center">
+                    {cell.id}
+                  </Typography>
+                  <Box display="flex" flexDirection="column" gap={1}>
+                    {cell.cards.map((card, cardIndex) => (
+                      <Box key={cardIndex} sx={{
+                        p: 0.5,
+                        border: '1px solid #ddd',
+                        borderRadius: 1,
+                        mb: 0.5,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 0.5,
+                        maxWidth: '140px',
+                        mx: 'auto'
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
+                            Card {cardIndex + 1}
+                          </Typography>
+                          {user === 'preposto' && (
+                            <Button
+                              size="small"
+                              variant="contained"
+                              onClick={() => setConfirmationDialog({
+                                open: true,
+                                cellIndex: cells.findIndex(c => c.id === cell.id),
+                                cardIndex,
+                                step: card.status === 'arrivato' ? 2 : 1,
+                                message: card.status === 'arrivato' ?
+                                  "Hanno controllato la merce e inviato la distinta?" :
+                                  "E' arrivato in buca?"
+                              })}
+                              sx={{
+                                minWidth: '30px',
+                                height: '20px',
+                                fontSize: '0.7rem',
+                                py: 0
+                              }}
+                            >
+                              OK
+                            </Button>
+                          )}
+                        </Box>
+                        {card.message && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              color: card.status === 'ritardo' ? 'error.main' : 'success.main',
+                              fontWeight: 'bold',
+                              fontSize: '0.7rem'
+                            }}
+                          >
+                            {card.message}
+                          </Typography>
+                        )}
+                        <Box sx={{ mt: 0.5 }}>
+                          <TextField
+                            size="small"
+                            label="TR"
+                            value={card.TR}
+                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'TR', e.target.value, cardIndex)}
+                            fullWidth
+                            sx={{ mb: 0.5 }}
+                            InputProps={{
+                              sx: { fontSize: '0.7rem', height: '28px' }
+                            }}
+                            InputLabelProps={{
+                              sx: { fontSize: '0.7rem' }
+                            }}
+                          />
+                          <TextField
+                            size="small"
+                            label="ID"
+                            value={card.ID}
+                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'ID', e.target.value, cardIndex)}
+                            fullWidth
+                            sx={{ mb: 0.5 }}
+                            InputProps={{
+                              sx: { fontSize: '0.7rem', height: '28px' }
+                            }}
+                            InputLabelProps={{
+                              sx: { fontSize: '0.7rem' }
+                            }}
+                          />
+                          <TextField
+                            size="small"
+                            label="N"
+                            value={card.N}
+                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'N', e.target.value, cardIndex)}
+                            fullWidth
+                            sx={{ mb: 0.5 }}
+                            InputProps={{
+                              sx: { fontSize: '0.7rem', height: '28px' }
+                            }}
+                            InputLabelProps={{
+                              sx: { fontSize: '0.7rem' }
+                            }}
+                          />
+                          <TextField
+                            size="small"
+                            label="Note"
+                            value={card.Note}
+                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'Note', e.target.value, cardIndex)}
+                            fullWidth
+                            InputProps={{
+                              sx: { fontSize: '0.7rem', height: '28px' }
+                            }}
+                            InputLabelProps={{
+                              sx: { fontSize: '0.7rem' }
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    ))}
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       </Grid>
 
       {/* History Dialog */}
