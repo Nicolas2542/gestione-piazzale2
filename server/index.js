@@ -209,41 +209,64 @@ app.post('/api/populate-cells', authenticateToken, async (req, res) => {
   }
 });
 
-// Endpoint per i cambiamenti del preposto
+// Endpoint per le modifiche del preposto
 app.post('/api/preposto-changes', authenticateToken, async (req, res) => {
   try {
-    const { cellNumber, cardIndex, status, startTime, endTime } = req.body;
+    const { cellNumber, cardIndex, status, message, startTime, endTime } = req.body;
     
     if (!cellNumber || cardIndex === undefined || !status) {
       return res.status(400).json({ error: 'Parametri mancanti' });
     }
 
-    // Prima ottieni la cella corrente
-    const currentCell = await pool.query('SELECT * FROM cells WHERE cell_number = $1', [cellNumber]);
-    
-    if (currentCell.rows.length === 0) {
-      return res.status(404).json({ error: 'Cella non trovata' });
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Recupera la cella esistente
+      const cellResult = await client.query(
+        'SELECT * FROM cells WHERE cell_number = $1',
+        [cellNumber]
+      );
+
+      if (cellResult.rows.length === 0) {
+        throw new Error('Cella non trovata');
+      }
+
+      const existingCards = cellResult.rows[0].cards;
+      existingCards[cardIndex] = {
+        ...existingCards[cardIndex],
+        status,
+        message,
+        startTime,
+        endTime
+      };
+
+      // Aggiorna la cella
+      await client.query(
+        'UPDATE cells SET cards = $1, updated_at = CURRENT_TIMESTAMP WHERE cell_number = $2',
+        [JSON.stringify(existingCards), cellNumber]
+      );
+
+      await client.query('COMMIT');
+
+      res.json({
+        message: 'Modifiche salvate con successo',
+        cellNumber,
+        cardIndex,
+        status,
+        message,
+        startTime,
+        endTime
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
     }
-
-    // Aggiorna la card specifica
-    const cards = currentCell.rows[0].cards;
-    cards[cardIndex] = {
-      ...cards[cardIndex],
-      status,
-      startTime,
-      endTime
-    };
-
-    // Salva la cella aggiornata
-    const result = await pool.query(
-      'UPDATE cells SET cards = $1 WHERE cell_number = $2 RETURNING *',
-      [JSON.stringify(cards), cellNumber]
-    );
-
-    res.json(result.rows[0]);
   } catch (error) {
     console.error('Error saving preposto changes:', error);
-    res.status(500).json({ error: 'Errore nel salvataggio delle modifiche' });
+    res.status(500).json({ error: error.message || 'Errore nel salvataggio delle modifiche' });
   }
 });
 

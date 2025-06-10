@@ -63,7 +63,8 @@ function App() {
     open: false, 
     cellIndex: null, 
     cardIndex: null,
-    step: 1 // 1: first confirmation, 2: second confirmation
+    step: 1, // 1: first confirmation, 2: second confirmation
+    message: ''
   });
   const [resetColorsDialog, setResetColorsDialog] = useState({ open: false });
   const [passwordDialog, setPasswordDialog] = useState({ 
@@ -524,13 +525,25 @@ function App() {
       
       // Aggiorna lo stato locale
       const newCells = [...cells];
-      const newStatus = status ? 'yellow' : 'green';
+      let newStatus;
+      let message;
+
+      if (!newCells[cellIndex].cards[cardIndex].status || newCells[cellIndex].cards[cardIndex].status === 'default') {
+        // Prima interazione
+        newStatus = status ? 'arrivato' : 'ritardo';
+        message = status ? "E' arrivato in buca" : "In ritardo";
+      } else {
+        // Seconda interazione
+        newStatus = status ? 'completato' : 'ritardo';
+        message = status ? "Carico Completato" : "In ritardo";
+      }
       
       newCells[cellIndex].cards[cardIndex] = {
         ...newCells[cellIndex].cards[cardIndex],
         status: newStatus,
-        startTime: newStatus === 'yellow' ? currentTime : newCells[cellIndex].cards[cardIndex].startTime,
-        endTime: newStatus === 'green' ? currentTime : null
+        message: message,
+        startTime: newStatus === 'arrivato' ? currentTime : newCells[cellIndex].cards[cardIndex].startTime,
+        endTime: newStatus === 'completato' ? currentTime : null
       };
 
       setCells(newCells);
@@ -569,6 +582,7 @@ function App() {
           cellNumber,
           cardIndex,
           status: newStatus,
+          message: message,
           startTime: newCells[cellIndex].cards[cardIndex].startTime,
           endTime: newCells[cellIndex].cards[cardIndex].endTime
         }),
@@ -743,370 +757,119 @@ function App() {
         />
       </Box>
 
-      <Grid container spacing={0.25}>
-        {filteredCells.slice(0, 10).map((cell, index) => (
-          <Grid item xs={2.4} sm={2} md={1.2} lg={1} key={index}>
-            <Box sx={{ mb: 0.25 }}>
-              <Typography variant="caption" align="center" sx={{ 
-                p: 0.15, 
-                bgcolor: 'primary.main', 
-                color: 'white',
-                borderRadius: 0.25,
-                fontSize: '0.75rem',
-                fontWeight: 'bold',
-                display: 'block'
-              }}>
-                {`Buca ${index + 4}`}
-              </Typography>
-            </Box>
-            {[0, 1, 2, 3].map((cardIndex) => (
-              <Card key={cardIndex} sx={{ 
-                maxWidth: 120, 
-                mx: 'auto', 
-                mb: 0.5,
-                bgcolor: cell.cards[cardIndex].status === 'yellow' ? '#fff176' : 
-                        cell.cards[cardIndex].status === 'red' ? '#ff8a80' : 
-                        cell.cards[cardIndex].status === 'green' ? '#81c784' :
-                        'white'
-              }}>
-                <CardContent sx={{ p: 0.25 }}>
-                  <Grid container spacing={0.25}>
-                    <Grid item xs={12}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                        <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.65rem', width: '25px' }}>
-                          ID:
-                        </Typography>
-                        <TextField
-                          fullWidth
-                          value={cell.cards[cardIndex].ID}
-                          onChange={(e) => handleCellChange(index, 'ID', e.target.value, cardIndex)}
-                          size="small"
-                          disabled={user !== 'admin'}
-                          sx={{ 
-                            '& .MuiInputBase-input': { 
-                              py: 0.15, 
-                              fontSize: '0.65rem',
+      <Grid container spacing={2}>
+        {cells.map((cell, cellIndex) => (
+          <Grid item xs={12} sm={6} md={4} key={cell.id}>
+            <Card>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  {cell.id}
+                </Typography>
+                <Grid container spacing={1}>
+                  {cell.cards.map((card, cardIndex) => (
+                    <Grid item xs={12} key={cardIndex}>
+                      <Box sx={{ 
+                        p: 1, 
+                        border: '1px solid #ddd',
+                        borderRadius: 1,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 1
+                      }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Typography variant="body2">
+                            Card {cardIndex + 1}
+                          </Typography>
+                          {user === 'preposto' && (
+                            <Box>
+                              {(!card.status || card.status === 'default') && (
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  onClick={() => setConfirmationDialog({
+                                    open: true,
+                                    cellIndex,
+                                    cardIndex,
+                                    step: 1,
+                                    message: "E' arrivato in buca?"
+                                  })}
+                                >
+                                  OK
+                                </Button>
+                              )}
+                              {card.status === 'arrivato' && (
+                                <Button
+                                  size="small"
+                                  variant="contained"
+                                  onClick={() => setConfirmationDialog({
+                                    open: true,
+                                    cellIndex,
+                                    cardIndex,
+                                    step: 2,
+                                    message: "Hanno controllato la merce e inviato la distinta?"
+                                  })}
+                                >
+                                  OK
+                                </Button>
+                              )}
+                            </Box>
+                          )}
+                        </Box>
+                        {card.message && (
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: card.status === 'ritardo' ? 'error.main' : 'success.main',
                               fontWeight: 'bold'
-                            },
-                            '& .MuiOutlinedInput-root': { minHeight: '24px' }
-                          }}
-                        />
+                            }}
+                          >
+                            {card.message}
+                          </Typography>
+                        )}
+                        {user === 'admin' && (
+                          <Box sx={{ mt: 1 }}>
+                            <TextField
+                              size="small"
+                              label="TR"
+                              value={card.TR}
+                              onChange={(e) => handleCellChange(cellIndex, 'TR', e.target.value, cardIndex)}
+                              fullWidth
+                              sx={{ mb: 1 }}
+                            />
+                            <TextField
+                              size="small"
+                              label="ID"
+                              value={card.ID}
+                              onChange={(e) => handleCellChange(cellIndex, 'ID', e.target.value, cardIndex)}
+                              fullWidth
+                              sx={{ mb: 1 }}
+                            />
+                            <TextField
+                              size="small"
+                              label="N"
+                              value={card.N}
+                              onChange={(e) => handleCellChange(cellIndex, 'N', e.target.value, cardIndex)}
+                              fullWidth
+                              sx={{ mb: 1 }}
+                            />
+                            <TextField
+                              size="small"
+                              label="Note"
+                              value={card.Note}
+                              onChange={(e) => handleCellChange(cellIndex, 'Note', e.target.value, cardIndex)}
+                              fullWidth
+                            />
+                          </Box>
+                        )}
                       </Box>
                     </Grid>
-                    <Grid item xs={12}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                        <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.65rem', width: '25px' }}>
-                          N:
-                        </Typography>
-                        <TextField
-                          fullWidth
-                          value={cell.cards[cardIndex].N}
-                          onChange={(e) => handleCellChange(index, 'N', e.target.value, cardIndex)}
-                          size="small"
-                          disabled={user !== 'admin'}
-                          sx={{ 
-                            '& .MuiInputBase-input': { 
-                              py: 0.15, 
-                              fontSize: '0.65rem',
-                              fontWeight: 'bold'
-                            },
-                            '& .MuiOutlinedInput-root': { minHeight: '24px' }
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                        <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.65rem', width: '25px' }}>
-                          TR:
-                        </Typography>
-                        <TextField
-                          fullWidth
-                          value={cell.cards[cardIndex].TR || ''}
-                          onChange={(e) => handleCellChange(index, 'TR', e.target.value, cardIndex)}
-                          size="small"
-                          disabled={user !== 'admin'}
-                          sx={{ 
-                            '& .MuiInputBase-input': { 
-                              py: 0.15, 
-                              fontSize: '0.65rem',
-                              fontWeight: 'bold'
-                            },
-                            '& .MuiOutlinedInput-root': { 
-                              minHeight: '24px',
-                              bgcolor: getTRColor(cell.cards[cardIndex].TR || ''),
-                              '& fieldset': {
-                                borderColor: 'transparent'
-                              }
-                            }
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                    <Grid item xs={12}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                        <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.65rem', width: '25px' }}>
-                          Note:
-                        </Typography>
-                        <TextField
-                          fullWidth
-                          value={cell.cards[cardIndex].Note}
-                          onChange={(e) => handleCellChange(index, 'Note', e.target.value, cardIndex)}
-                          size="small"
-                          multiline
-                          rows={1}
-                          disabled={user !== 'admin'}
-                          sx={{ 
-                            '& .MuiInputBase-input': { 
-                              py: 0.15, 
-                              fontSize: '0.65rem',
-                              fontWeight: 'bold'
-                            },
-                            '& .MuiOutlinedInput-root': { minHeight: '24px' }
-                          }}
-                        />
-                      </Box>
-                    </Grid>
-                    {user === 'preposto' && (
-                      <Grid item xs={12} sx={{ mt: 0.25 }}>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          size="small"
-                          fullWidth
-                          onClick={() => {
-                            const currentStatus = cells[index].cards[cardIndex].status;
-                            setConfirmationDialog({ 
-                              open: true, 
-                              cellIndex: index, 
-                              cardIndex, 
-                              step: currentStatus === 'yellow' ? 2 : 1 
-                            });
-                          }}
-                          sx={{ 
-                            py: 0.15,
-                            fontSize: '0.65rem',
-                            height: '20px',
-                            minWidth: 'auto'
-                          }}
-                        >
-                          OK
-                        </Button>
-                      </Grid>
-                    )}
-                    {user === 'admin' && (
-                      <Grid item xs={12} sx={{ mt: 0.25 }}>
-                        <Button
-                          variant="contained"
-                          color="primary"
-                          size="small"
-                          fullWidth
-                          onClick={() => saveCellData(index)}
-                          sx={{ 
-                            py: 0.15,
-                            fontSize: '0.65rem',
-                            height: '20px',
-                            minWidth: 'auto'
-                          }}
-                        >
-                          OK
-                        </Button>
-                      </Grid>
-                    )}
-                  </Grid>
-                </CardContent>
-              </Card>
-            ))}
+                  ))}
+                </Grid>
+              </CardContent>
+            </Card>
           </Grid>
         ))}
       </Grid>
-
-      <Box sx={{ mt: 4, mb: 2 }}>
-        <Typography variant="subtitle2" align="center" sx={{ mb: 1, color: 'text.secondary' }}>
-          Buche 30-33 e Preparazione
-        </Typography>
-        <Grid container spacing={0.25}>
-          {filteredCells.slice(10, 17).map((cell, index) => {
-            // Calcola l'indice corretto per le celle da buca 30 in poi
-            const actualIndex = index + 10;
-            return (
-              <Grid item xs={2.4} sm={2} md={1.2} lg={1} key={actualIndex}>
-                <Box sx={{ mb: 0.25 }}>
-                  <Typography variant="caption" align="center" sx={{ 
-                    p: 0.15, 
-                    bgcolor: 'primary.main', 
-                    color: 'white',
-                    borderRadius: 0.25,
-                    fontSize: '0.75rem',
-                    fontWeight: 'bold',
-                    display: 'block'
-                  }}>
-                    {actualIndex < 14 ? `Buca ${actualIndex + 20}` : `Preparazione ${actualIndex - 13}`}
-                  </Typography>
-                </Box>
-                {[0, 1, 2, 3].map((cardIndex) => (
-                  <Card key={cardIndex} sx={{ 
-                    maxWidth: 120, 
-                    mx: 'auto', 
-                    mb: 0.5,
-                    bgcolor: cell.cards[cardIndex].status === 'yellow' ? '#fff176' : 
-                            cell.cards[cardIndex].status === 'red' ? '#ff8a80' : 
-                            cell.cards[cardIndex].status === 'green' ? '#81c784' :
-                            'white'
-                  }}>
-                    <CardContent sx={{ p: 0.25 }}>
-                      <Grid container spacing={0.25}>
-                        <Grid item xs={12}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                            <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.65rem', width: '25px' }}>
-                              ID:
-                            </Typography>
-                            <TextField
-                              fullWidth
-                              value={cell.cards[cardIndex].ID}
-                              onChange={(e) => handleCellChange(actualIndex, 'ID', e.target.value, cardIndex)}
-                              size="small"
-                              disabled={user !== 'admin'}
-                              sx={{ 
-                                '& .MuiInputBase-input': { 
-                                  py: 0.15, 
-                                  fontSize: '0.65rem',
-                                  fontWeight: 'bold'
-                                },
-                                '& .MuiOutlinedInput-root': { minHeight: '24px' }
-                              }}
-                            />
-                          </Box>
-                        </Grid>
-                        <Grid item xs={12}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                            <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.65rem', width: '25px' }}>
-                              N:
-                            </Typography>
-                            <TextField
-                              fullWidth
-                              value={cell.cards[cardIndex].N}
-                              onChange={(e) => handleCellChange(actualIndex, 'N', e.target.value, cardIndex)}
-                              size="small"
-                              disabled={user !== 'admin'}
-                              sx={{ 
-                                '& .MuiInputBase-input': { 
-                                  py: 0.15, 
-                                  fontSize: '0.65rem',
-                                  fontWeight: 'bold'
-                                },
-                                '& .MuiOutlinedInput-root': { minHeight: '24px' }
-                              }}
-                            />
-                          </Box>
-                        </Grid>
-                        <Grid item xs={12}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                            <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.65rem', width: '25px' }}>
-                              TR:
-                            </Typography>
-                            <TextField
-                              fullWidth
-                              value={cell.cards[cardIndex].TR || ''}
-                              onChange={(e) => handleCellChange(actualIndex, 'TR', e.target.value, cardIndex)}
-                              size="small"
-                              disabled={user !== 'admin'}
-                              sx={{ 
-                                '& .MuiInputBase-input': { 
-                                  py: 0.15, 
-                                  fontSize: '0.65rem',
-                                  fontWeight: 'bold'
-                                },
-                                '& .MuiOutlinedInput-root': { 
-                                  minHeight: '24px',
-                                  bgcolor: getTRColor(cell.cards[cardIndex].TR || ''),
-                                  '& fieldset': {
-                                    borderColor: 'transparent'
-                                  }
-                                }
-                              }}
-                            />
-                          </Box>
-                        </Grid>
-                        <Grid item xs={12}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                            <Typography variant="caption" sx={{ mr: 0.5, fontSize: '0.65rem', width: '25px' }}>
-                              Note:
-                            </Typography>
-                            <TextField
-                              fullWidth
-                              value={cell.cards[cardIndex].Note}
-                              onChange={(e) => handleCellChange(actualIndex, 'Note', e.target.value, cardIndex)}
-                              size="small"
-                              multiline
-                              rows={1}
-                              disabled={user !== 'admin'}
-                              sx={{ 
-                                '& .MuiInputBase-input': { 
-                                  py: 0.15, 
-                                  fontSize: '0.65rem',
-                                  fontWeight: 'bold'
-                                },
-                                '& .MuiOutlinedInput-root': { minHeight: '24px' }
-                              }}
-                            />
-                          </Box>
-                        </Grid>
-                        {user === 'preposto' && (
-                          <Grid item xs={12} sx={{ mt: 0.25 }}>
-                            <Button
-                              variant="contained"
-                              color="primary"
-                              size="small"
-                              fullWidth
-                              onClick={() => {
-                                const currentStatus = cells[actualIndex].cards[cardIndex].status;
-                                setConfirmationDialog({ 
-                                  open: true, 
-                                  cellIndex: actualIndex, 
-                                  cardIndex, 
-                                  step: currentStatus === 'yellow' ? 2 : 1 
-                                });
-                              }}
-                              sx={{ 
-                                py: 0.15,
-                                fontSize: '0.65rem',
-                                height: '20px',
-                                minWidth: 'auto'
-                              }}
-                            >
-                              OK
-                            </Button>
-                          </Grid>
-                        )}
-                        {user === 'admin' && (
-                          <Grid item xs={12} sx={{ mt: 0.25 }}>
-                            <Button
-                              variant="contained"
-                              color="primary"
-                              size="small"
-                              fullWidth
-                              onClick={() => saveCellData(actualIndex)}
-                              sx={{ 
-                                py: 0.15,
-                                fontSize: '0.65rem',
-                                height: '20px',
-                                minWidth: 'auto'
-                              }}
-                            >
-                              OK
-                            </Button>
-                          </Grid>
-                        )}
-                      </Grid>
-                    </CardContent>
-                  </Card>
-                ))}
-              </Grid>
-            );
-          })}
-        </Grid>
-      </Box>
 
       {/* History Dialog */}
       <Dialog
