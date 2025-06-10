@@ -519,108 +519,46 @@ function App() {
 
   const handlePrepostoConfirmation = async (cellIndex, cardIndex, status) => {
     try {
-      console.log('Saving preposto changes for:', { cellIndex, cardIndex, status });
+      const cellNumber = cells[cellIndex].id;
+      const currentTime = new Date().toISOString();
       
-      // Determina il nome della cella in base all'indice
-      let cellNumber;
-      if (cellIndex < 10) {
-        cellNumber = `Buca ${cellIndex + 4}`;
-      } else if (cellIndex < 14) {
-        cellNumber = `Buca ${cellIndex + 20}`;  // Corretto per le buche 30-33
-      } else {
-        cellNumber = `Preparazione ${cellIndex - 13}`;
-      }
-
-      console.log('Nome cella determinato:', cellNumber);
-
-      // Determina il nuovo stato della card
-      let newStatus;
-      const currentStatus = cells[cellIndex].cards[cardIndex].status;
-      
-      if (currentStatus === 'yellow') {
-        newStatus = status ? 'green' : 'yellow';
-      } else {
-        newStatus = status ? 'yellow' : 'red';
-      }
-
-      const startTime = newStatus === 'yellow' ? new Date().toISOString() : null;
-      const endTime = newStatus === 'green' ? new Date().toISOString() : null;
-
-      // Aggiorna prima lo stato locale
+      // Aggiorna lo stato locale
       const newCells = [...cells];
+      const newStatus = status ? 'yellow' : 'green';
+      
       newCells[cellIndex].cards[cardIndex] = {
         ...newCells[cellIndex].cards[cardIndex],
         status: newStatus,
-        startTime,
-        endTime
+        startTime: newStatus === 'yellow' ? currentTime : newCells[cellIndex].cards[cardIndex].startTime,
+        endTime: newStatus === 'green' ? currentTime : null
       };
+
       setCells(newCells);
 
       // Registra l'evento nel log di monitoraggio
-      if (newStatus === 'yellow' || newStatus === 'green') {
-        try {
-          const logResponse = await fetch(`${API_URL}/api/monitoring-logs`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('token')}`
-            },
-            body: JSON.stringify({
-              cellNumber,
-              cardIndex: cardIndex + 1,
-              eventType: newStatus,
-              cardData: newCells[cellIndex].cards[cardIndex]
-            }),
-          });
-
-          if (!logResponse.ok) {
-            const errorData = await logResponse.json();
-            throw new Error(errorData.error || 'Errore nella registrazione dell\'evento');
-          }
-        } catch (error) {
-          console.error('Error logging monitoring event:', error);
-          showNotification(error.message || 'Errore nella registrazione dell\'evento', 'error');
-        }
-      }
-
-      // Verifica se la cella esiste
-      console.log('Verifica esistenza cella:', cellNumber);
-      const checkResponse = await fetch(`${API_URL}/api/cells/${cellNumber}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!checkResponse.ok) {
-        // Se la cella non esiste, popola tutte le celle mancanti
-        console.log('Cella non trovata, popolamento celle mancanti...');
-        const populateResponse = await fetch(`${API_URL}/api/populate-cells`, {
+      try {
+        const logResponse = await fetch(`${API_URL}/api/monitoring-logs`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           },
-          body: JSON.stringify({ cellNumber })
+          body: JSON.stringify({
+            cellNumber,
+            cardIndex: cardIndex + 1,
+            eventType: newStatus,
+            cardData: newCells[cellIndex].cards[cardIndex]
+          }),
         });
 
-        if (!populateResponse.ok) {
-          const errorData = await populateResponse.json();
-          throw new Error(errorData.error || 'Errore durante il popolamento delle celle');
+        if (!logResponse.ok) {
+          throw new Error('Errore nella registrazione dell\'evento');
         }
-
-        const populateResult = await populateResponse.json();
-        console.log('Risultato popolamento celle:', populateResult);
-
-        if (!populateResult.cellExists) {
-          if (populateResult.errors && populateResult.errors.length > 0) {
-            throw new Error(populateResult.errors.join('\n'));
-          }
-          throw new Error(`Impossibile creare la cella ${cellNumber}`);
-        }
+      } catch (error) {
+        console.error('Error logging monitoring event:', error);
       }
 
-      // Procedi con il salvataggio delle modifiche
-      console.log('Salvataggio modifiche per cella:', cellNumber);
+      // Salva le modifiche nel database
       const response = await fetch(`${API_URL}/api/preposto-changes`, {
         method: 'POST',
         headers: {
@@ -631,74 +569,55 @@ function App() {
           cellNumber,
           cardIndex,
           status: newStatus,
-          startTime,
-          endTime
+          startTime: newCells[cellIndex].cards[cardIndex].startTime,
+          endTime: newCells[cellIndex].cards[cardIndex].endTime
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Errore nel salvataggio delle modifiche');
+        throw new Error('Errore nel salvataggio delle modifiche');
       }
 
       const result = await response.json();
-      console.log('Risultato salvataggio:', result);
-
+      showNotification(result.message, 'success');
+      
       // Ricarica i dati dopo il salvataggio
-      console.log('Ricarico dati dopo salvataggio...');
-      const finalReloadResponse = await fetch(`${API_URL}/api/cells`, {
+      await fetchData();
+    } catch (error) {
+      console.error('Error saving preposto changes:', error);
+      showNotification(error.message, 'error');
+    }
+  };
+
+  const fetchData = async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/cells`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       });
-
-      if (!finalReloadResponse.ok) {
-        throw new Error('Errore nel ricaricamento dei dati finali');
+      
+      if (!response.ok) {
+        throw new Error('Errore nel recupero dei dati');
       }
-
-      const finalReloadData = await finalReloadResponse.json();
       
-      // Aggiorna lo stato locale con i dati finali
-      const finalCells = [...cells];
-      finalReloadData.forEach(item => {
-        let cellIndex;
-        const cellNumber = item.cell_number;
+      const data = await response.json();
+      
+      // Mappa i dati ricevuti alle celle
+      const mappedCells = data.map(cell => {
+        const cellIndex = cells.findIndex(c => c.id === cell.cell_number);
+        if (cellIndex === -1) return null;
         
-        if (cellNumber.startsWith('Buca')) {
-          const num = parseInt(cellNumber.split(' ')[1]);
-          if (num >= 4 && num <= 13) {
-            cellIndex = num - 4;
-          } else if (num >= 30 && num <= 33) {
-            cellIndex = num - 20;
-          }
-        } else if (cellNumber.startsWith('Preparazione')) {
-          const num = parseInt(cellNumber.split(' ')[1]);
-          cellIndex = num + 13;
-        }
+        return {
+          ...cells[cellIndex],
+          cards: cell.cards
+        };
+      }).filter(Boolean);
 
-        if (cellIndex !== undefined && cellIndex >= 0 && cellIndex < finalCells.length) {
-          console.log(`Mapping finale ${cellNumber} to index ${cellIndex}`);
-          finalCells[cellIndex].cards = item.cards.map(card => ({
-            status: card.status || 'default',
-            startTime: card.startTime || null,
-            endTime: card.endTime || null,
-            TR: card.TR || '',
-            ID: card.ID || '',
-            N: card.N || '',
-            Note: card.Note || ''
-          }));
-        }
-      });
-      
-      setCells(finalCells);
-
-      // Chiudi il dialog di conferma
-      setConfirmationDialog({ open: false, cellIndex: null, cardIndex: null, step: 1 });
-
-      showNotification('Modifiche salvate con successo', 'success');
+      setCells(mappedCells);
     } catch (error) {
-      console.error('Error saving preposto changes:', error);
-      showNotification(error.message || 'Errore nel salvataggio delle modifiche', 'error');
+      console.error('Error fetching data:', error);
+      showNotification('Errore nel recupero dei dati', 'error');
     }
   };
 

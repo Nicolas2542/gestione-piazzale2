@@ -129,9 +129,10 @@ app.post('/api/monitoring-logs', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Parametri mancanti' });
     }
 
+    const currentTime = new Date().toISOString();
     const result = await pool.query(
-      'INSERT INTO monitoring_logs (cell_number, card_index, event_type, card_data) VALUES ($1, $2, $3, $4) RETURNING *',
-      [cellNumber, cardIndex, eventType, JSON.stringify(cardData)]
+      'INSERT INTO monitoring_logs (cell_number, card_index, event_type, card_data, timestamp) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [cellNumber, cardIndex, eventType, JSON.stringify(cardData), currentTime]
     );
 
     res.json(result.rows[0]);
