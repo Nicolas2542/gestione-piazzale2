@@ -757,84 +757,80 @@ function App() {
         />
       </Box>
 
-      <Grid container spacing={2}>
+      <Grid container spacing={1}>
         {cells.map((cell, cellIndex) => (
-          <Grid item xs={12} sm={6} md={4} key={cell.id}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
+          <Grid item xs={6} sm={4} md={3} lg={2} key={cell.id}>
+            <Card sx={{ maxWidth: 200, mx: 'auto' }}>
+              <CardContent sx={{ p: 1 }}>
+                <Typography variant="subtitle2" gutterBottom align="center">
                   {cell.id}
                 </Typography>
-                <Grid container spacing={1}>
+                <Grid container spacing={0.5}>
                   {cell.cards.map((card, cardIndex) => (
                     <Grid item xs={12} key={cardIndex}>
                       <Box sx={{ 
-                        p: 1, 
+                        p: 0.5, 
                         border: '1px solid #ddd',
                         borderRadius: 1,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 1
+                        gap: 0.5
                       }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="body2">
+                          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
                             Card {cardIndex + 1}
                           </Typography>
                           {user === 'preposto' && (
-                            <Box>
-                              {(!card.status || card.status === 'default') && (
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  onClick={() => setConfirmationDialog({
-                                    open: true,
-                                    cellIndex,
-                                    cardIndex,
-                                    step: 1,
-                                    message: "E' arrivato in buca?"
-                                  })}
-                                >
-                                  OK
-                                </Button>
-                              )}
-                              {card.status === 'arrivato' && (
-                                <Button
-                                  size="small"
-                                  variant="contained"
-                                  onClick={() => setConfirmationDialog({
-                                    open: true,
-                                    cellIndex,
-                                    cardIndex,
-                                    step: 2,
-                                    message: "Hanno controllato la merce e inviato la distinta?"
-                                  })}
-                                >
-                                  OK
-                                </Button>
-                              )}
-                            </Box>
+                            <Button
+                              size="small"
+                              variant="contained"
+                              onClick={() => setConfirmationDialog({
+                                open: true,
+                                cellIndex,
+                                cardIndex,
+                                step: card.status === 'arrivato' ? 2 : 1,
+                                message: card.status === 'arrivato' ? 
+                                  "Hanno controllato la merce e inviato la distinta?" : 
+                                  "E' arrivato in buca?"
+                              })}
+                              sx={{ 
+                                minWidth: '30px',
+                                height: '20px',
+                                fontSize: '0.7rem',
+                                py: 0
+                              }}
+                            >
+                              OK
+                            </Button>
                           )}
                         </Box>
                         {card.message && (
                           <Typography 
-                            variant="body2" 
+                            variant="caption" 
                             sx={{ 
                               color: card.status === 'ritardo' ? 'error.main' : 'success.main',
-                              fontWeight: 'bold'
+                              fontWeight: 'bold',
+                              fontSize: '0.7rem'
                             }}
                           >
                             {card.message}
                           </Typography>
                         )}
                         {user === 'admin' && (
-                          <Box sx={{ mt: 1 }}>
+                          <Box sx={{ mt: 0.5 }}>
                             <TextField
                               size="small"
                               label="TR"
                               value={card.TR}
                               onChange={(e) => handleCellChange(cellIndex, 'TR', e.target.value, cardIndex)}
                               fullWidth
-                              sx={{ mb: 1 }}
+                              sx={{ mb: 0.5 }}
+                              InputProps={{
+                                sx: { fontSize: '0.7rem', height: '28px' }
+                              }}
+                              InputLabelProps={{
+                                sx: { fontSize: '0.7rem' }
+                              }}
                             />
                             <TextField
                               size="small"
@@ -842,7 +838,13 @@ function App() {
                               value={card.ID}
                               onChange={(e) => handleCellChange(cellIndex, 'ID', e.target.value, cardIndex)}
                               fullWidth
-                              sx={{ mb: 1 }}
+                              sx={{ mb: 0.5 }}
+                              InputProps={{
+                                sx: { fontSize: '0.7rem', height: '28px' }
+                              }}
+                              InputLabelProps={{
+                                sx: { fontSize: '0.7rem' }
+                              }}
                             />
                             <TextField
                               size="small"
@@ -850,7 +852,13 @@ function App() {
                               value={card.N}
                               onChange={(e) => handleCellChange(cellIndex, 'N', e.target.value, cardIndex)}
                               fullWidth
-                              sx={{ mb: 1 }}
+                              sx={{ mb: 0.5 }}
+                              InputProps={{
+                                sx: { fontSize: '0.7rem', height: '28px' }
+                              }}
+                              InputLabelProps={{
+                                sx: { fontSize: '0.7rem' }
+                              }}
                             />
                             <TextField
                               size="small"
@@ -858,6 +866,12 @@ function App() {
                               value={card.Note}
                               onChange={(e) => handleCellChange(cellIndex, 'Note', e.target.value, cardIndex)}
                               fullWidth
+                              InputProps={{
+                                sx: { fontSize: '0.7rem', height: '28px' }
+                              }}
+                              InputLabelProps={{
+                                sx: { fontSize: '0.7rem' }
+                              }}
                             />
                           </Box>
                         )}
