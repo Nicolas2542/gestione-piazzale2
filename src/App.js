@@ -767,14 +767,16 @@ function App() {
                 </Typography>
                 <Grid container spacing={0.5}>
                   {cell.cards.map((card, cardIndex) => (
-                    <Grid item xs={3} key={cardIndex}>
+                    <Grid item xs={12} key={cardIndex}>
                       <Box sx={{ 
                         p: 0.5, 
                         border: '1px solid #ddd',
                         borderRadius: 1,
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: 0.5
+                        gap: 0.5,
+                        maxWidth: '150px',
+                        mx: 'auto'
                       }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
