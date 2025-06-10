@@ -892,138 +892,79 @@ function App() {
           ))}
         </Grid>
 
-        {/* Buche da 30 a Preparazione 2 */}
-        <Typography variant="h6" sx={{ mt: 4, mb: 1 }}>Buca 30 - Buca 33 - Preparazione 2</Typography>
-        <Grid container spacing={2} direction="row" wrap="nowrap" sx={{ overflowX: 'auto' }}>
-          {cells.filter(cell => {
-            if (/^Buca (3[0-3])$/.test(cell.id)) return true;
-            if (/^Preparazione ([1-2])$/.test(cell.id)) return true;
-            return false;
-          }).map((cell, cellIndex) => (
-            <Grid item key={cell.id} sx={{ minWidth: 170 }}>
-              <Card sx={{ maxWidth: 160, mx: 'auto' }}>
-                <CardContent sx={{ p: 1 }}>
-                  <Typography variant="subtitle2" gutterBottom align="center">
-                    {cell.id}
-                  </Typography>
-                  <Box display="flex" flexDirection="column" gap={1}>
-                    {cell.cards.map((card, cardIndex) => (
-                      <Box key={cardIndex} sx={{
-                        p: 0.5,
-                        border: '1px solid #ddd',
-                        borderRadius: 1,
-                        mb: 0.5,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 0.5,
-                        maxWidth: '140px',
-                        mx: 'auto'
-                      }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                            Card {cardIndex + 1}
-                          </Typography>
-                          {user === 'preposto' && (
+        {/* Sezione Buche 30-33 e Preparazione 1-2 */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Buca 30 - Buca 33 - Preparazione 2
+          </Typography>
+          <Grid container spacing={2} sx={{ flexWrap: 'nowrap', overflowX: 'auto', pb: 2 }}>
+            {[30, 31, 32, 33, 'prep1', 'prep2'].map((cellNumber) => (
+              <Grid item key={cellNumber} sx={{ minWidth: 300 }}>
+                <Card>
+                  <CardContent>
+                    <Typography variant="subtitle2" align="center" gutterBottom>
+                      {cellNumber === 'prep1' ? 'Preparazione 1' : 
+                       cellNumber === 'prep2' ? 'Preparazione 2' : 
+                       `Buca ${cellNumber}`}
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      {[0, 1, 2, 3].map((cardIndex) => (
+                        <Box key={cardIndex} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Typography variant="caption">Card {cardIndex + 1}</Typography>
                             <Button
-                              size="small"
                               variant="contained"
-                              onClick={() => setConfirmationDialog({
-                                open: true,
-                                cellIndex: cells.findIndex(c => c.id === cell.id),
-                                cardIndex,
-                                step: card.status === 'arrivato' ? 2 : 1,
-                                message: card.status === 'arrivato' ?
-                                  "Hanno controllato la merce e inviato la distinta?" :
-                                  "E' arrivato in buca?"
-                              })}
-                              sx={{
-                                minWidth: '30px',
-                                height: '20px',
-                                fontSize: '0.7rem',
-                                py: 0
-                              }}
+                              color="primary"
+                              size="small"
+                              onClick={() => handlePrepostoConfirmation(cellNumber, cardIndex)}
+                              disabled={!isPreposto}
                             >
                               OK
                             </Button>
-                          )}
+                          </Box>
+                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              label="TR"
+                              variant="outlined"
+                              value={cells[`${cellNumber}-${cardIndex}`]?.tr || ''}
+                              onChange={(e) => handleCellChange(cellNumber, cardIndex, 'tr', e.target.value)}
+                            />
+                            <TextField
+                              fullWidth
+                              size="small"
+                              label="ID"
+                              variant="outlined"
+                              value={cells[`${cellNumber}-${cardIndex}`]?.id || ''}
+                              onChange={(e) => handleCellChange(cellNumber, cardIndex, 'id', e.target.value)}
+                            />
+                            <TextField
+                              fullWidth
+                              size="small"
+                              label="N"
+                              variant="outlined"
+                              value={cells[`${cellNumber}-${cardIndex}`]?.n || ''}
+                              onChange={(e) => handleCellChange(cellNumber, cardIndex, 'n', e.target.value)}
+                            />
+                            <TextField
+                              fullWidth
+                              size="small"
+                              label="Note"
+                              variant="outlined"
+                              value={cells[`${cellNumber}-${cardIndex}`]?.note || ''}
+                              onChange={(e) => handleCellChange(cellNumber, cardIndex, 'note', e.target.value)}
+                            />
+                          </Box>
                         </Box>
-                        {card.message && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: card.status === 'ritardo' ? 'error.main' : 'success.main',
-                              fontWeight: 'bold',
-                              fontSize: '0.7rem'
-                            }}
-                          >
-                            {card.message}
-                          </Typography>
-                        )}
-                        <Box sx={{ mt: 0.5 }}>
-                          <TextField
-                            size="small"
-                            label="TR"
-                            value={card.TR}
-                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'TR', e.target.value, cardIndex)}
-                            fullWidth
-                            sx={{ mb: 0.5 }}
-                            InputProps={{
-                              sx: { fontSize: '0.7rem', height: '28px' }
-                            }}
-                            InputLabelProps={{
-                              sx: { fontSize: '0.7rem' }
-                            }}
-                          />
-                          <TextField
-                            size="small"
-                            label="ID"
-                            value={card.ID}
-                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'ID', e.target.value, cardIndex)}
-                            fullWidth
-                            sx={{ mb: 0.5 }}
-                            InputProps={{
-                              sx: { fontSize: '0.7rem', height: '28px' }
-                            }}
-                            InputLabelProps={{
-                              sx: { fontSize: '0.7rem' }
-                            }}
-                          />
-                          <TextField
-                            size="small"
-                            label="N"
-                            value={card.N}
-                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'N', e.target.value, cardIndex)}
-                            fullWidth
-                            sx={{ mb: 0.5 }}
-                            InputProps={{
-                              sx: { fontSize: '0.7rem', height: '28px' }
-                            }}
-                            InputLabelProps={{
-                              sx: { fontSize: '0.7rem' }
-                            }}
-                          />
-                          <TextField
-                            size="small"
-                            label="Note"
-                            value={card.Note}
-                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'Note', e.target.value, cardIndex)}
-                            fullWidth
-                            InputProps={{
-                              sx: { fontSize: '0.7rem', height: '28px' }
-                            }}
-                            InputLabelProps={{
-                              sx: { fontSize: '0.7rem' }
-                            }}
-                          />
-                        </Box>
-                      </Box>
-                    ))}
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                      ))}
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
       </Grid>
 
       {/* History Dialog */}
