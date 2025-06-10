@@ -144,9 +144,10 @@ function Monitoring({ onBack, cells, user }) {
                 <TableCell>TR</TableCell>
                 <TableCell>Note</TableCell>
                 <TableCell>Stato</TableCell>
-                <TableCell>Inizio</TableCell>
-                <TableCell>Fine</TableCell>
+                <TableCell>Inizio (Giallo)</TableCell>
+                <TableCell>Fine (Verde)</TableCell>
                 <TableCell>Tempo Totale</TableCell>
+                <TableCell>Differenza Tempo</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -160,7 +161,7 @@ function Monitoring({ onBack, cells, user }) {
                 )
                 .filter(card => card.status === 'yellow' || card.status === 'green')
                 .sort((a, b) => new Date(b.startTime) - new Date(a.startTime))
-                .map((card, index) => (
+                .map(card => (
                   <TableRow key={`${card.cellNumber}-${card.cardIndex}`}>
                     <TableCell>{card.ID || '-'}</TableCell>
                     <TableCell>{card.N || '-'}</TableCell>
@@ -188,6 +189,12 @@ function Monitoring({ onBack, cells, user }) {
                     <TableCell>
                       {card.startTime && (card.endTime || card.status === 'yellow') ? 
                         formatDuration(Math.round((new Date(card.endTime || new Date()) - new Date(card.startTime)) / 1000)) : 
+                        '-'
+                      }
+                    </TableCell>
+                    <TableCell>
+                      {card.time_difference_seconds ? 
+                        formatDuration(card.time_difference_seconds) : 
                         '-'
                       }
                     </TableCell>
