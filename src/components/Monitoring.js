@@ -147,7 +147,6 @@ function Monitoring({ onBack, cells, user }) {
                 <TableCell>Inizio (Giallo)</TableCell>
                 <TableCell>Fine (Verde)</TableCell>
                 <TableCell>Tempo Totale</TableCell>
-                <TableCell>Differenza Tempo</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -181,20 +180,14 @@ function Monitoring({ onBack, cells, user }) {
                       />
                     </TableCell>
                     <TableCell>
-                      {card.startTime ? new Date(card.startTime).toLocaleString() : '-'}
+                      {card.startTime ? new Date(card.startTime).toLocaleString('it-IT') : '-'}
                     </TableCell>
                     <TableCell>
-                      {card.endTime ? new Date(card.endTime).toLocaleString() : '-'}
+                      {card.endTime ? new Date(card.endTime).toLocaleString('it-IT') : '-'}
                     </TableCell>
                     <TableCell>
-                      {card.startTime && (card.endTime || card.status === 'yellow') ? 
-                        formatDuration(Math.round((new Date(card.endTime || new Date()) - new Date(card.startTime)) / 1000)) : 
-                        '-'
-                      }
-                    </TableCell>
-                    <TableCell>
-                      {card.time_difference_seconds ? 
-                        formatDuration(card.time_difference_seconds) : 
+                      {card.startTime && card.endTime ? 
+                        formatDuration(Math.round((new Date(card.endTime) - new Date(card.startTime)) / 1000)) : 
                         '-'
                       }
                     </TableCell>

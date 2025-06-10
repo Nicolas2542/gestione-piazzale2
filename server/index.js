@@ -42,10 +42,7 @@ pool.query(`
     card_index INTEGER NOT NULL,
     event_type VARCHAR(20) NOT NULL,
     timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    card_data JSONB,
-    yellow_time TIMESTAMP WITH TIME ZONE,
-    green_time TIMESTAMP WITH TIME ZONE,
-    time_difference INTERVAL
+    card_data JSONB
   )
 `).catch(err => console.error('Error creating monitoring_logs table:', err));
 
@@ -132,30 +129,9 @@ app.post('/api/monitoring-logs', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Parametri mancanti' });
     }
 
-    let yellowTime = null;
-    let greenTime = null;
-    let timeDifference = null;
-
-    if (eventType === 'yellow') {
-      yellowTime = new Date();
-    } else if (eventType === 'green') {
-      greenTime = new Date();
-      
-      // Recupera il timestamp giallo precedente
-      const yellowEvent = await pool.query(
-        'SELECT timestamp FROM monitoring_logs WHERE cell_number = $1 AND card_index = $2 AND event_type = $3 ORDER BY timestamp DESC LIMIT 1',
-        [cellNumber, cardIndex, 'yellow']
-      );
-
-      if (yellowEvent.rows.length > 0) {
-        yellowTime = yellowEvent.rows[0].timestamp;
-        timeDifference = greenTime - yellowTime;
-      }
-    }
-
     const result = await pool.query(
-      'INSERT INTO monitoring_logs (cell_number, card_index, event_type, card_data, yellow_time, green_time, time_difference) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-      [cellNumber, cardIndex, eventType, JSON.stringify(cardData), yellowTime, greenTime, timeDifference]
+      'INSERT INTO monitoring_logs (cell_number, card_index, event_type, card_data) VALUES ($1, $2, $3, $4) RETURNING *',
+      [cellNumber, cardIndex, eventType, JSON.stringify(cardData)]
     );
 
     res.json(result.rows[0]);
@@ -168,17 +144,9 @@ app.post('/api/monitoring-logs', authenticateToken, async (req, res) => {
 // Endpoint per ottenere i log di monitoraggio
 app.get('/api/monitoring-logs', authenticateToken, async (req, res) => {
   try {
-    const result = await pool.query(`
-      SELECT 
-        *,
-        CASE 
-          WHEN time_difference IS NOT NULL 
-          THEN EXTRACT(EPOCH FROM time_difference)::INTEGER 
-          ELSE NULL 
-        END as time_difference_seconds
-      FROM monitoring_logs 
-      ORDER BY timestamp DESC
-    `);
+    const result = await pool.query(
+      'SELECT * FROM monitoring_logs ORDER BY timestamp DESC'
+    );
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching monitoring logs:', error);
