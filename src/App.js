@@ -910,7 +910,7 @@ function App() {
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {[0, 1, 2, 3].map((cardIndex) => (
-                        <Box key={cardIndex} sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        <Box key={cardIndex} sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxWidth: '140px', mx: 'auto' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography variant="caption">Card {cardIndex + 1}</Typography>
                             <Button
