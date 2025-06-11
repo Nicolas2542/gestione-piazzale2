@@ -38,6 +38,7 @@ const API_URL = 'https://web-production-b7884.up.railway.app';
 
 function App() {
   const [user, setUser] = useState(null);
+  const isPreposto = user === 'preposto';
   const [sessionId, setSessionId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [showMonitoring, setShowMonitoring] = useState(false);
