@@ -908,7 +908,7 @@ function App() {
                        cellNumber === 'prep2' ? 'Preparazione 2' : 
                        `Buca ${cellNumber}`}
                     </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '170px', height: '761.28px' }}>
                       {[0, 1, 2, 3].map((cardIndex) => (
                         <Box key={cardIndex} sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxWidth: '140px', mx: 'auto' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
