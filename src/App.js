@@ -900,7 +900,7 @@ function App() {
           </Typography>
           <Grid container spacing={2} sx={{ flexWrap: 'nowrap', overflowX: 'auto', pb: 2 }}>
             {[30, 31, 32, 33, 'prep1', 'prep2'].map((cellNumber) => (
-              <Grid item key={cellNumber} sx={{ minWidth: 200 }}>
+              <Grid item key={cellNumber} sx={{ minWidth: 300 }}>
                 <Card>
                   <CardContent>
                     <Typography variant="subtitle2" align="center" gutterBottom>
@@ -910,7 +910,7 @@ function App() {
                     </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {[0, 1, 2, 3].map((cardIndex) => (
-                        <Box key={cardIndex} sx={{ display: 'flex', flexDirection: 'column', gap: 1, width: '138px', height: '161.6px', mx: 'auto' }}>
+                        <Box key={cardIndex} sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxWidth: '140px', mx: 'auto' }}>
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography variant="caption">Card {cardIndex + 1}</Typography>
                             <Button
