@@ -797,7 +797,7 @@ function App() {
                         key={cardIndex}
                         style={getCardStyle(cell.cell_number)}
                         className={`card ${card.status}`}
-                        onClick={() => handleCardClick(cell.cell_number, cardIndex)}
+                        onClick={() => handlePrepostoConfirmation(cell.cell_number, cardIndex)}
                       >
                         <div style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '12px', color: '#666' }}>
                           Card {cardIndex + 1}
@@ -876,9 +876,7 @@ function App() {
                           className={`card ${cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
                                                                       cellNumber === 'prep2' ? 'Preparazione 2' : 
                                                                       `Buca ${cellNumber}`))?.cards[cardIndex]?.status || 'default'}`}
-                          onClick={() => handleCardClick(cellNumber === 'prep1' ? 'Preparazione 1' : 
-                                                       cellNumber === 'prep2' ? 'Preparazione 2' : 
-                                                       `Buca ${cellNumber}`, cardIndex)}
+                          onClick={() => handlePrepostoConfirmation(cellNumber, cardIndex)}
                         >
                           <div style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '12px', color: '#666' }}>
                             Card {cardIndex + 1}
