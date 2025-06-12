@@ -693,28 +693,6 @@ function App() {
   }).filter(Boolean); // Rimuove le celle null (quelle senza corrispondenze)
 
   const getCardStyle = (cellNumber) => {
-    const isBuca30ToPrep2 = cellNumber.startsWith('Buca 3') || 
-                           cellNumber.startsWith('Buca 4') || 
-                           cellNumber.startsWith('Preparazione 1') || 
-                           cellNumber.startsWith('Preparazione 2');
-    
-    if (isBuca30ToPrep2) {
-      return {
-        width: '120px',
-        height: '140px',
-        margin: '5px',
-        padding: '8px',
-        borderRadius: '8px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-        backgroundColor: 'white',
-        position: 'relative',
-        overflow: 'hidden'
-      };
-    }
-    
     return {
       width: '170px',
       height: '761.28px',
@@ -813,119 +791,49 @@ function App() {
                   <Typography variant="subtitle2" gutterBottom align="center">
                     {cell.id}
                   </Typography>
-                  <Box display="flex" flexDirection="column" gap={1}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {cell.cards.map((card, cardIndex) => (
-                      <Box key={cardIndex} sx={{
-                        p: 0.5,
-                        border: '1px solid #ddd',
-                        borderRadius: 1,
-                        mb: 0.5,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 0.5,
-                        maxWidth: '140px',
-                        mx: 'auto'
-                      }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>
-                            Card {cardIndex + 1}
-                          </Typography>
-                          {user === 'preposto' && (
-                            <Button
-                              size="small"
-                              variant="contained"
-                              onClick={() => setConfirmationDialog({
-                                open: true,
-                                cellIndex: cells.findIndex(c => c.id === cell.id),
-                                cardIndex,
-                                step: card.status === 'arrivato' ? 2 : 1,
-                                message: card.status === 'arrivato' ?
-                                  "Hanno controllato la merce e inviato la distinta?" :
-                                  "E' arrivato in buca?"
-                              })}
-                              sx={{
-                                minWidth: '30px',
-                                height: '20px',
-                                fontSize: '0.7rem',
-                                py: 0
-                              }}
-                            >
-                              OK
-                            </Button>
+                      <div
+                        key={cardIndex}
+                        style={getCardStyle(cell.cell_number)}
+                        className={`card ${card.status}`}
+                        onClick={() => handleCardClick(cell.cell_number, cardIndex)}
+                      >
+                        <div style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '12px', color: '#666' }}>
+                          Card {cardIndex + 1}
+                        </div>
+                        <div style={{ marginTop: '20px' }}>
+                          <div style={{ marginBottom: '5px' }}>
+                            <strong>TR:</strong> {card.TR || '-'}
+                          </div>
+                          <div style={{ marginBottom: '5px' }}>
+                            <strong>ID:</strong> {card.ID || '-'}
+                          </div>
+                          <div style={{ marginBottom: '5px' }}>
+                            <strong>N:</strong> {card.N || '-'}
+                          </div>
+                          <div style={{ marginBottom: '5px' }}>
+                            <strong>Note:</strong> {card.Note || '-'}
+                          </div>
+                          {card.startTime && (
+                            <div style={{ marginBottom: '5px' }}>
+                              <strong>Inizio:</strong> {new Date(card.startTime).toLocaleTimeString()}
+                            </div>
                           )}
-                        </Box>
-                        {card.message && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              color: card.status === 'ritardo' ? 'error.main' : 'success.main',
-                              fontWeight: 'bold',
-                              fontSize: '0.7rem'
-                            }}
-                          >
-                            {card.message}
-                          </Typography>
-                        )}
-                        <Box sx={{ mt: 0.5 }}>
-                          <TextField
-                            size="small"
-                            label="TR"
-                            value={card.TR}
-                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'TR', e.target.value, cardIndex)}
-                            fullWidth
-                            sx={{ mb: 0.5 }}
-                            InputProps={{
-                              sx: { fontSize: '0.7rem', height: '28px' }
-                            }}
-                            InputLabelProps={{
-                              sx: { fontSize: '0.7rem' }
-                            }}
-                          />
-                          <TextField
-                            size="small"
-                            label="ID"
-                            value={card.ID}
-                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'ID', e.target.value, cardIndex)}
-                            fullWidth
-                            sx={{ mb: 0.5 }}
-                            InputProps={{
-                              sx: { fontSize: '0.7rem', height: '28px' }
-                            }}
-                            InputLabelProps={{
-                              sx: { fontSize: '0.7rem' }
-                            }}
-                          />
-                          <TextField
-                            size="small"
-                            label="N"
-                            value={card.N}
-                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'N', e.target.value, cardIndex)}
-                            fullWidth
-                            sx={{ mb: 0.5 }}
-                            InputProps={{
-                              sx: { fontSize: '0.7rem', height: '28px' }
-                            }}
-                            InputLabelProps={{
-                              sx: { fontSize: '0.7rem' }
-                            }}
-                          />
-                          <TextField
-                            size="small"
-                            label="Note"
-                            value={card.Note}
-                            onChange={(e) => handleCellChange(cells.findIndex(c => c.id === cell.id), 'Note', e.target.value, cardIndex)}
-                            fullWidth
-                            InputProps={{
-                              sx: { fontSize: '0.7rem', height: '28px' }
-                            }}
-                            InputLabelProps={{
-                              sx: { fontSize: '0.7rem' }
-                            }}
-                          />
-                        </Box>
-                      </Box>
+                          {card.endTime && (
+                            <div style={{ marginBottom: '5px' }}>
+                              <strong>Fine:</strong> {new Date(card.endTime).toLocaleTimeString()}
+                            </div>
+                          )}
+                          {card.totalTime && (
+                            <div style={{ marginBottom: '5px' }}>
+                              <strong>Tempo Totale:</strong> {card.totalTime}
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     ))}
-                  </Box>
+                  </div>
                 </CardContent>
               </Card>
             </Grid>
@@ -939,66 +847,83 @@ function App() {
           </Typography>
           <Grid container spacing={2} sx={{ flexWrap: 'nowrap', overflowX: 'auto', pb: 2 }}>
             {[30, 31, 32, 33, 'prep1', 'prep2'].map((cellNumber) => (
-              <Grid item key={cellNumber} sx={{ minWidth: 300 }}>
-                <Card>
-                  <CardContent>
+              <Grid item key={cellNumber} sx={{ minWidth: 170 }}>
+                <Card sx={{ maxWidth: 160, mx: 'auto' }}>
+                  <CardContent sx={{ p: 1 }}>
                     <Typography variant="subtitle2" align="center" gutterBottom>
                       {cellNumber === 'prep1' ? 'Preparazione 1' : 
                        cellNumber === 'prep2' ? 'Preparazione 2' : 
                        `Buca ${cellNumber}`}
                     </Typography>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '170px', height: '761.28px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {[0, 1, 2, 3].map((cardIndex) => (
-                        <Box key={cardIndex} sx={{ display: 'flex', flexDirection: 'column', gap: 1, maxWidth: '140px', mx: 'auto' }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="caption">Card {cardIndex + 1}</Typography>
-                            <Button
-                              variant="contained"
-                              color="primary"
-                              size="small"
-                              onClick={() => handlePrepostoConfirmation(cellNumber, cardIndex)}
-                              disabled={!isPreposto}
-                            >
-                              OK
-                            </Button>
-                          </Box>
-                          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label="TR"
-                              variant="outlined"
-                              value={cells[`${cellNumber}-${cardIndex}`]?.tr || ''}
-                              onChange={(e) => handleCellChange(cellNumber, cardIndex, 'tr', e.target.value)}
-                            />
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label="ID"
-                              variant="outlined"
-                              value={cells[`${cellNumber}-${cardIndex}`]?.id || ''}
-                              onChange={(e) => handleCellChange(cellNumber, cardIndex, 'id', e.target.value)}
-                            />
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label="N"
-                              variant="outlined"
-                              value={cells[`${cellNumber}-${cardIndex}`]?.n || ''}
-                              onChange={(e) => handleCellChange(cellNumber, cardIndex, 'n', e.target.value)}
-                            />
-                            <TextField
-                              fullWidth
-                              size="small"
-                              label="Note"
-                              variant="outlined"
-                              value={cells[`${cellNumber}-${cardIndex}`]?.note || ''}
-                              onChange={(e) => handleCellChange(cellNumber, cardIndex, 'note', e.target.value)}
-                            />
-                          </Box>
-                        </Box>
+                        <div
+                          key={cardIndex}
+                          style={getCardStyle(cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                            cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                            `Buca ${cellNumber}`)}
+                          className={`card ${cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                                      cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                                      `Buca ${cellNumber}`))?.cards[cardIndex]?.status || 'default'}`}
+                          onClick={() => handleCardClick(cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                       cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                       `Buca ${cellNumber}`, cardIndex)}
+                        >
+                          <div style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '12px', color: '#666' }}>
+                            Card {cardIndex + 1}
+                          </div>
+                          <div style={{ marginTop: '20px' }}>
+                            <div style={{ marginBottom: '5px' }}>
+                              <strong>TR:</strong> {cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                                           cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                                           `Buca ${cellNumber}`))?.cards[cardIndex]?.TR || '-'}
+                            </div>
+                            <div style={{ marginBottom: '5px' }}>
+                              <strong>ID:</strong> {cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                                           cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                                           `Buca ${cellNumber}`))?.cards[cardIndex]?.ID || '-'}
+                            </div>
+                            <div style={{ marginBottom: '5px' }}>
+                              <strong>N:</strong> {cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                                         cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                                         `Buca ${cellNumber}`))?.cards[cardIndex]?.N || '-'}
+                            </div>
+                            <div style={{ marginBottom: '5px' }}>
+                              <strong>Note:</strong> {cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                                             cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                                             `Buca ${cellNumber}`))?.cards[cardIndex]?.Note || '-'}
+                            </div>
+                            {cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                     cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                     `Buca ${cellNumber}`))?.cards[cardIndex]?.startTime && (
+                              <div style={{ marginBottom: '5px' }}>
+                                <strong>Inizio:</strong> {new Date(cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                                                         cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                                                         `Buca ${cellNumber}`))?.cards[cardIndex]?.startTime).toLocaleTimeString()}
+                              </div>
+                            )}
+                            {cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                     cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                     `Buca ${cellNumber}`))?.cards[cardIndex]?.endTime && (
+                              <div style={{ marginBottom: '5px' }}>
+                                <strong>Fine:</strong> {new Date(cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                                                       cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                                                       `Buca ${cellNumber}`))?.cards[cardIndex]?.endTime).toLocaleTimeString()}
+                              </div>
+                            )}
+                            {cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                     cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                     `Buca ${cellNumber}`))?.cards[cardIndex]?.totalTime && (
+                              <div style={{ marginBottom: '5px' }}>
+                                <strong>Tempo Totale:</strong> {cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                                                                                       cellNumber === 'prep2' ? 'Preparazione 2' : 
+                                                                                       `Buca ${cellNumber}`))?.cards[cardIndex]?.totalTime}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       ))}
-                    </Box>
+                    </div>
                   </CardContent>
                 </Card>
               </Grid>
