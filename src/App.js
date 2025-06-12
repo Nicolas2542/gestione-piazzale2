@@ -692,6 +692,45 @@ function App() {
     return cell;
   }).filter(Boolean); // Rimuove le celle null (quelle senza corrispondenze)
 
+  const getCardStyle = (cellNumber) => {
+    const isBuca30ToPrep2 = cellNumber.startsWith('Buca 3') || 
+                           cellNumber.startsWith('Buca 4') || 
+                           cellNumber.startsWith('Preparazione 1') || 
+                           cellNumber.startsWith('Preparazione 2');
+    
+    if (isBuca30ToPrep2) {
+      return {
+        width: '120px',
+        height: '140px',
+        margin: '5px',
+        padding: '8px',
+        borderRadius: '8px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        backgroundColor: 'white',
+        position: 'relative',
+        overflow: 'hidden'
+      };
+    }
+    
+    return {
+      width: '170px',
+      height: '761.28px',
+      margin: '5px',
+      padding: '8px',
+      borderRadius: '8px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      backgroundColor: 'white',
+      position: 'relative',
+      overflow: 'hidden'
+    };
+  };
+
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
