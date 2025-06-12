@@ -859,9 +859,20 @@ function App() {
                       {[0, 1, 2, 3].map((cardIndex) => (
                         <div
                           key={cardIndex}
-                          style={getCardStyle(cellNumber === 'prep1' ? 'Preparazione 1' : 
-                                            cellNumber === 'prep2' ? 'Preparazione 2' : 
-                                            `Buca ${cellNumber}`)}
+                          style={{
+                            width: '170px',
+                            height: '761.28px',
+                            margin: '5px',
+                            padding: '8px',
+                            borderRadius: '8px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'space-between',
+                            backgroundColor: 'white',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
                           className={`card ${cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
                                                                       cellNumber === 'prep2' ? 'Preparazione 2' : 
                                                                       `Buca ${cellNumber}`))?.cards[cardIndex]?.status || 'default'}`}
