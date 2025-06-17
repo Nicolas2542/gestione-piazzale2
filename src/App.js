@@ -692,22 +692,26 @@ function App() {
     return cell;
   }).filter(Boolean); // Rimuove le celle null (quelle senza corrispondenze)
 
-  const getCardStyle = (cellNumber) => {
-    return {
-      width: '170px',
-      height: '761.28px',
-      margin: '5px',
-      padding: '8px',
-      borderRadius: '8px',
-      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      display: 'flex',
-      flexDirection: 'column',
-      justifyContent: 'space-between',
-      backgroundColor: 'white',
-      position: 'relative',
-      overflow: 'hidden'
-    };
-  };
+  const getCardStyle = (status) => ({
+    width: '150px',
+    height: '250px',
+    margin: '10px',
+    padding: '10px',
+    borderRadius: '8px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: status === 'default' ? '#f5f5f5' : 
+                    status === 'giallo' ? '#fff3cd' : 
+                    status === 'verde' ? '#d4edda' : '#f8d7da',
+    border: `2px solid ${
+      status === 'default' ? '#ddd' : 
+      status === 'giallo' ? '#ffeeba' : 
+      status === 'verde' ? '#c3e6cb' : '#f5c6cb'
+    }`,
+    position: 'relative',
+    overflow: 'hidden'
+  });
 
   if (!user) {
     return <Login onLogin={handleLogin} />;
@@ -793,44 +797,62 @@ function App() {
                   </Typography>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {cell.cards.map((card, cardIndex) => (
-                      <div
-                        key={cardIndex}
-                        style={getCardStyle(cell.cell_number)}
-                        className={`card ${card.status}`}
-                        onClick={() => handlePrepostoConfirmation(cell.cell_number, cardIndex)}
-                      >
-                        <div style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '12px', color: '#666' }}>
-                          Card {cardIndex + 1}
+                      <div key={cardIndex} style={getCardStyle(card.status)}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span>TR:</span>
+                            <TextField
+                              size="small"
+                              value={card.TR || ''}
+                              onChange={(e) => handleCellChange(cellIndex, 'TR', e.target.value, cardIndex)}
+                              style={{ width: '60px' }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span>ID:</span>
+                            <TextField
+                              size="small"
+                              value={card.ID || ''}
+                              onChange={(e) => handleCellChange(cellIndex, 'ID', e.target.value, cardIndex)}
+                              style={{ width: '60px' }}
+                            />
+                          </div>
                         </div>
-                        <div style={{ marginTop: '20px' }}>
-                          <div style={{ marginBottom: '5px' }}>
-                            <strong>TR:</strong> {card.TR || '-'}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span>N:</span>
+                            <TextField
+                              size="small"
+                              value={card.N || ''}
+                              onChange={(e) => handleCellChange(cellIndex, 'N', e.target.value, cardIndex)}
+                              style={{ width: '60px' }}
+                            />
                           </div>
-                          <div style={{ marginBottom: '5px' }}>
-                            <strong>ID:</strong> {card.ID || '-'}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                            <span>NOTE:</span>
+                            <TextField
+                              size="small"
+                              value={card.Note || ''}
+                              onChange={(e) => handleCellChange(cellIndex, 'Note', e.target.value, cardIndex)}
+                              style={{ width: '60px' }}
+                            />
                           </div>
-                          <div style={{ marginBottom: '5px' }}>
-                            <strong>N:</strong> {card.N || '-'}
-                          </div>
-                          <div style={{ marginBottom: '5px' }}>
-                            <strong>Note:</strong> {card.Note || '-'}
-                          </div>
-                          {card.startTime && (
-                            <div style={{ marginBottom: '5px' }}>
-                              <strong>Inizio:</strong> {new Date(card.startTime).toLocaleTimeString()}
-                            </div>
-                          )}
-                          {card.endTime && (
-                            <div style={{ marginBottom: '5px' }}>
-                              <strong>Fine:</strong> {new Date(card.endTime).toLocaleTimeString()}
-                            </div>
-                          )}
-                          {card.totalTime && (
-                            <div style={{ marginBottom: '5px' }}>
-                              <strong>Tempo Totale:</strong> {card.totalTime}
-                            </div>
-                          )}
                         </div>
+                        {card.startTime && (
+                          <div style={{ marginBottom: '5px' }}>
+                            <strong>Inizio:</strong> {new Date(card.startTime).toLocaleTimeString()}
+                          </div>
+                        )}
+                        {card.endTime && (
+                          <div style={{ marginBottom: '5px' }}>
+                            <strong>Fine:</strong> {new Date(card.endTime).toLocaleTimeString()}
+                          </div>
+                        )}
+                        {card.totalTime && (
+                          <div style={{ marginBottom: '5px' }}>
+                            <strong>Tempo Totale:</strong> {card.totalTime}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -859,23 +881,9 @@ function App() {
                       {[0, 1, 2, 3].map((cardIndex) => (
                         <div
                           key={cardIndex}
-                          style={{
-                            width: '170px',
-                            height: '761.28px',
-                            margin: '5px',
-                            padding: '8px',
-                            borderRadius: '8px',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'space-between',
-                            backgroundColor: 'white',
-                            position: 'relative',
-                            overflow: 'hidden'
-                          }}
-                          className={`card ${cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
+                          style={getCardStyle(cells.find(c => c.id === (cellNumber === 'prep1' ? 'Preparazione 1' : 
                                                                       cellNumber === 'prep2' ? 'Preparazione 2' : 
-                                                                      `Buca ${cellNumber}`))?.cards[cardIndex]?.status || 'default'}`}
+                                                                      `Buca ${cellNumber}`))?.cards[cardIndex]?.status || 'default')}
                           onClick={() => handlePrepostoConfirmation(cellNumber, cardIndex)}
                         >
                           <div style={{ position: 'absolute', top: '5px', right: '5px', fontSize: '12px', color: '#666' }}>
